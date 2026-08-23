@@ -72,10 +72,17 @@ step_termux_config() {
 
 # ── 4. Paquetes base ───────────────────────────────────────
 step_packages() {
-    log 4 "Actualizando e instalando paquetes base..."
+    log 4 "Actualizando e instalando paquetes base y glibc..."
     pkg update -y && pkg upgrade -y
+    
+    # Pre-instalar glibc-repo y actualizar lista ANTES de instalar paquetes
+    # (Esto soluciona el error 'Failed to install glibc' de Core-Termux)
+    pkg install -y glibc-repo 2>/dev/null
+    pkg update -y 2>/dev/null
+    pkg install -y glibc proot 2>/dev/null
+    
     pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi 2>/dev/null
-    ok "fish  git  curl  fzf  sqlite  cowsay  nyancat  termux-api  yazi"
+    ok "Paquetes base, glibc y dependencias instalados"
 }
 
 # ── 5. setup-launcher (showcase oficial) ──────────────────
@@ -148,16 +155,8 @@ step_core_termux() {
     log 7 "Instalando Core-Termux y Agentes de IA..."
     curl -fsSL https://raw.githubusercontent.com/DevCoreXOfficial/core-termux/main/install.sh | bash
     
-    # Después de instalar Core-Termux, usamos el comando 'core' para instalar las IA
     if [ -x "$PREFIX/bin/core" ]; then
-        log 7 "Instalando IA: opencode, kilocode-cli, freebuff (modo Ubuntu Proot)..."
-        
-        # Parchear la UI de core-termux para que elija automáticamente "proot-distro" sin preguntar
-        LOG_SH="$HOME_DIR/.local/share/core-termux/core/utils/log.sh"
-        if [ -f "$LOG_SH" ]; then
-            sed -i '/while true; do/,/done/c     for ((i=0; i<total; i++)); do         if [[ "${options[$i]}" == *"proot-distro"* ]]; then             selected=$i; break;         fi     done' "$LOG_SH"
-        fi
-        
+        log 7 "Instalando IA: opencode, kilocode-cli, freebuff..."
         "$PREFIX/bin/core" install ai --opencode --kilocode-cli --freebuff
         ok "Agentes de IA instalados"
     else

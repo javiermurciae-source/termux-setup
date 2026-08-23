@@ -193,8 +193,8 @@ step_core_termux() {
     
     if [ -x "$PREFIX/bin/core" ]; then
         log 7.1 "Sincronizando módulos de IA (opencode, kilocode, freebuff, antigravity-cli)..."
-        "$PREFIX/bin/core" install ai --opencode --kilocode-cli --freebuff --antigravity-cli --keelcode --supercode --mimocode --codex --hermes
-        ok "Asistentes de IA listos (OpenCode, KiloCode, FreeBuff, Antigravity, KeelCode, SuperCode, MiMoCode, Codex, Hermes) 🤖"
+        "$PREFIX/bin/core" install ai --opencode --kilocode-cli --freebuff --antigravity-cli --keelcode --supercode --mimocode --codex --hermes-agent --qwen-code
+        ok "Asistentes de IA listos (OpenCode, KiloCode, FreeBuff, Antigravity, KeelCode, SuperCode, MiMoCode, Codex, Hermes, Qwen) 🤖"
         
         log 7.2 "Sincronizando herramientas Dev (core install dev)..."
         "$PREFIX/bin/core" install dev

@@ -150,7 +150,14 @@ step_core_termux() {
     
     # Después de instalar Core-Termux, usamos el comando 'core' para instalar las IA
     if [ -x "$PREFIX/bin/core" ]; then
-        log 7 "Instalando IA: opencode, kilocode-cli, freebuff..."
+        log 7 "Instalando IA: opencode, kilocode-cli, freebuff (modo Ubuntu Proot)..."
+        
+        # Parchear la UI de core-termux para que elija automáticamente "proot-distro" sin preguntar
+        LOG_SH="$HOME_DIR/.local/share/core-termux/core/utils/log.sh"
+        if [ -f "$LOG_SH" ]; then
+            sed -i '/while true; do/,/done/c     for ((i=0; i<total; i++)); do         if [[ "${options[$i]}" == *"proot-distro"* ]]; then             selected=$i; break;         fi     done' "$LOG_SH"
+        fi
+        
         "$PREFIX/bin/core" install ai --opencode --kilocode-cli --freebuff
         ok "Agentes de IA instalados"
     else

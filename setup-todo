@@ -223,6 +223,8 @@ if os.path.exists(prefs):
     set_val('int', 'in_app_keyboard_horizontal_inset', '13')
     set_val('float', 'in_app_keyboard_key_corner_radius_dp', '2.7')
     set_val('float', 'app_launcher_bar_height', '1.72')
+    pinned_apps = '{"schemaVersion":5,"items":[{"type":"app","packageName":"com.whatsapp","activityName":"com.whatsapp.Main"},{"type":"app","packageName":"com.brave.browser","activityName":"com.google.android.apps.chrome.Main"},{"type":"app","packageName":"com.transsion.camera","activityName":"com.android.camera.CameraLauncher"},{"type":"app","packageName":"com.openai.chatgpt","activityName":"com.openai.chatgpt.MainActivity"},{"type":"app","packageName":"com.google.android.gm","activityName":"com.google.android.gm.ConversationListActivityGmail"},{"type":"app","packageName":"com.nequi.MobileApp","activityName":"com.nequi.MobileApp.MainActivity"},{"type":"app","packageName":"me.bmax.apatch","activityName":"me.bmax.apatch.ui.MainActivity"},{"type":"app","packageName":"com.binance.dev","activityName":"com.eaas.launcher.activities.main.MainActivity"},{"type":"app","packageName":"com.discord","activityName":"com.discord.main.MainDefault"},{"type":"app","packageName":"com.google.android.dialer","activityName":"com.google.android.dialer.extensions.GoogleDialtactsActivity"},{"type":"app","packageName":"com.google.android.apps.youtube.music","activityName":"com.google.android.apps.youtube.music.activities.MusicActivity"},{"type":"app","packageName":"com.pinterest","activityName":"com.pinterest.activity.PinterestActivity"}],"folders":[],"appIconOverrides":[]}'
+    set_val('string', 'app_launcher_pinned_items_v2', pinned_apps)
     
     tree.write(prefs, encoding='utf-8', xml_declaration=True)
 " 2>/dev/null

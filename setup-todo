@@ -225,7 +225,7 @@ step_recon_scraping() {
     # Instalación de WhatWeb (Escáner de huellas y tecnologías web)
     if [ ! -d "$HOME_DIR/.local/share/WhatWeb" ]; then
         log 8.1 "Descargando WhatWeb desde GitHub..."
-        git clone --depth 1 https://github.com/urbanadventurer/WhatWeb.git "$HOME_DIR/.local/share/WhatWeb" >/dev/null 2>&1
+        git clone --progress --depth 1 https://github.com/urbanadventurer/WhatWeb.git "$HOME_DIR/.local/share/WhatWeb"
         ln -sf "$HOME_DIR/.local/share/WhatWeb/whatweb" "$PREFIX/bin/whatweb"
         
         # Dependencias de Ruby para WhatWeb
@@ -241,7 +241,8 @@ step_recon_scraping() {
     
     if [ ! -d "$HOME_DIR/wordlists/SecLists" ]; then
         mkdir -p "$HOME_DIR/wordlists"
-        git clone --depth 1 https://github.com/danielmiessler/SecLists.git "$HOME_DIR/wordlists/SecLists" >/dev/null 2>&1
+        warn "Descargando SecLists (~1GB). Mostrando progreso..."
+        git clone --progress --depth 1 https://github.com/danielmiessler/SecLists.git "$HOME_DIR/wordlists/SecLists"
         ok "Diccionarios de SecLists descargados 📚"
     else
         ok "SecLists ya está descargado. ¡Omitiendo! ⚡"
@@ -250,7 +251,8 @@ step_recon_scraping() {
     if [ ! -x "$PREFIX/bin/ffuf" ]; then
         export GOPATH="$HOME_DIR/go"
         warn "Compilando Ffuf en Go (Esto puede tardar un par de minutos)..."
-        go install github.com/ffuf/ffuf/v2@latest
+        warn "Compilando Ffuf (Go)..."
+        go install -v github.com/ffuf/ffuf/v2@latest
         ln -sf "$GOPATH/bin/ffuf" "$PREFIX/bin/ffuf" 2>/dev/null
         ok "Ffuf (Fuzzer ultrarrápido) instalado 🚀"
     else
@@ -276,8 +278,8 @@ step_advanced_lab() {
     
     # Fallback seguro para apktool si no está en el repo base
     if ! command -v apktool >/dev/null 2>&1; then
-        wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O $PREFIX/bin/apktool
-        wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O $PREFIX/bin/apktool.jar
+        wget --show-progress -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O $PREFIX/bin/apktool
+        wget --show-progress -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O $PREFIX/bin/apktool.jar
         chmod +x $PREFIX/bin/apktool $PREFIX/bin/apktool.jar
     fi
 

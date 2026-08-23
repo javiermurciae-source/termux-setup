@@ -122,8 +122,8 @@ step_fish_config() {
     if [ -f "$FISH_CFG" ]; then
         # Remover fastfetch si ya existe para evitar duplicados
         sed -i '/fastfetch/d' "$FISH_CFG"
-        # Añadirlo justo después de __move_cursor_to_bottom en fish_greeting
-        sed -i '/__move_cursor_to_bottom/a \        fastfetch 2>/dev/null' "$FISH_CFG"
+        # Quitar el cursor al fondo y asegurar un clear justo antes del fastfetch para encuadre perfecto
+        sed -i 's/.*__move_cursor_to_bottom.*/        command clear\n        fastfetch 2>\/dev\/null/g' "$FISH_CFG"
         ok "fastfetch añadido al inicio (fish_greeting)"
     fi
 

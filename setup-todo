@@ -246,7 +246,10 @@ step_core_termux() {
     else
         warn "Instalando motor Core-Termux..."
         curl -fSLO https://raw.githubusercontent.com/DevCoreXOfficial/core-termux/main/install.sh
-        bash install.sh
+        # Hack para forzar que el instalador de core-termux muestre TODOS los errores
+        sed -i 's|&>/dev/null||g' install.sh
+        sed -i 's|>/dev/null 2>&1||g' install.sh
+        bash install.sh || warn "Advertencia: El instalador de Core-Termux arrojó un error."
         rm -f install.sh
     fi
     

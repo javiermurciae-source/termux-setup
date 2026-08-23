@@ -146,9 +146,18 @@ PERSONAL_FISH
 
 # ── 7. Core-Termux (al final) ──────────────────────────────
 step_core_termux() {
-    log 7 "Instalando Core-Termux..."
+    log 7 "Instalando Core-Termux y Agentes de IA..."
     curl -fsSL https://raw.githubusercontent.com/DevCoreXOfficial/core-termux/main/install.sh | bash
-    ok "Core-Termux instalado"
+    
+    # Después de instalar Core-Termux, usamos el comando 'core' para instalar las IA
+    if [ -x "$PREFIX/bin/core" ]; then
+        log 7 "Instalando IA: opencode, kilocode-cli, freebuff..."
+        "$PREFIX/bin/core" install ai --opencode --kilocode-cli --freebuff
+        ok "Agentes de IA instalados"
+    else
+        warn "No se encontró el comando 'core'. Las herramientas de IA no se instalaron."
+    fi
+    ok "Core-Termux listo"
 }
 
 # ══════════════════════════════════════════════════════════

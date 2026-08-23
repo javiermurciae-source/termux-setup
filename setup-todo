@@ -80,19 +80,27 @@ step_packages() {
 
 # ── 5. setup-launcher (showcase oficial) ──────────────────
 step_setup_launcher() {
-    log 5 "Instalando showcase oficial (Fish + OhMyPosh + Neovim + eza + zoxide)..."
+    log 5 "Instalando showcase oficial descargando desde GitHub..."
     cd "$HOME_DIR" || true
-    launcher="$SCRIPT_DIR/setup-launcher"
-    if [ ! -f "$launcher" ]; then
-        warn "Descargando setup-launcher..."
-        curl -fsSLO https://raw.githubusercontent.com/PickleHik3/termux-launcher/main/docs/en/examples/setup-launcher
-        launcher="$HOME_DIR/setup-launcher"
-    fi
-    chmod +x "$launcher"
-    # Asegurar ejecución directa con bash exportando variables para que no se tranque por digests
-    export TERMUX_LAUNCHER_SKIP_DIGEST=1
-    printf '1\ny\n' | bash "$launcher" || warn "setup-launcher finalizó con advertencias"
-    ok "Fish + OhMyPosh + zoxide + eza + Neovim + sigye + fastfetch + kitten"
+    
+    # Descarga literal como pediste, directo al HOME del celular
+    curl -fsSLO https://raw.githubusercontent.com/PickleHik3/termux-launcher/main/docs/en/examples/setup-launcher
+    
+    # Ejecutar pasando 1 (Todo) y y (Fish Default)
+    sh setup-launcher << 'EOF'
+1
+y
+EOF
+
+    # FIX para fastfetch: setup-launcher lo instala en ~/.local/bin/fastfetch
+    # Creamos un enlace global para que funcione al instante en cualquier lado
+    for bin in fastfetch sigye kitten setup-nvim; do
+        if [ -f "$HOME_DIR/.local/bin/$bin" ]; then
+            ln -sf "$HOME_DIR/.local/bin/$bin" "$PREFIX/bin/$bin"
+        fi
+    done
+    
+    ok "setup-launcher ejecutado correctamente"
 }
 
 # ── 6. Fish config + fastfetch al arrancar ─────────────────

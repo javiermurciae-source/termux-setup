@@ -249,7 +249,8 @@ step_recon_scraping() {
 
     if [ ! -x "$PREFIX/bin/ffuf" ]; then
         export GOPATH="$HOME_DIR/go"
-        go install github.com/ffuf/ffuf/v2@latest >/dev/null 2>&1
+        warn "Compilando Ffuf en Go (Esto puede tardar un par de minutos)..."
+        go install github.com/ffuf/ffuf/v2@latest
         ln -sf "$GOPATH/bin/ffuf" "$PREFIX/bin/ffuf" 2>/dev/null
         ok "Ffuf (Fuzzer ultrarrápido) instalado 🚀"
     else

@@ -1,0 +1,170 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# ══════════════════════════════════════════════════════════
+#  setup-todo — Restauración completa de entorno Termux
+#  Ejecutar UNA sola vez. Requiere internet.
+# ══════════════════════════════════════════════════════════
+
+FLAG="$HOME/.core_setup_done"
+if [ -f "$FLAG" ]; then
+    echo "Ya fue configurado. Borra ~/.core_setup_done para repetir."
+    exit 0
+fi
+
+PREFIX="/data/data/com.termux/files/usr"
+HOME_DIR="/data/data/com.termux/files/home"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+banner() {
+    clear
+    printf '\n'
+    printf '  \e[1;35m╔══════════════════════════════════════════════╗\e[0m\n'
+    printf '  \e[1;35m║  🚀  Setup completo de Termux Launcher       ║\e[0m\n'
+    printf '  \e[1;35m╚══════════════════════════════════════════════╝\e[0m\n\n'
+}
+
+log()  { printf '\n  \e[1;34m[%s/7]\e[0m %s\n' "$1" "$2"; }
+ok()   { printf '      \e[32m✔\e[0m  %s\n' "$1"; }
+warn() { printf '      \e[33m⚠\e[0m  %s\n' "$1"; }
+
+# ── 1. Scripts personales ──────────────────────────────────
+step_scripts() {
+    log 1 "Copiando scripts personales..."
+    mkdir -p "$HOME_DIR"
+    for f in horario.sh verificar-cod.sh gif-selector.sh fzf_clipboard_scratchpad.sh; do
+        src="$SCRIPT_DIR/scripts/$f"
+        if [ -f "$src" ]; then
+            cp "$src" "$HOME_DIR/$f" && chmod +x "$HOME_DIR/$f" && ok "$f"
+        else
+            warn "No encontrado: scripts/$f"
+        fi
+    done
+}
+
+# ── 2. Fastfetch ───────────────────────────────────────────
+step_fastfetch() {
+    log 2 "Instalando config Fastfetch (config.jsonc + descargas.gif)..."
+    mkdir -p "$HOME_DIR/.config/fastfetch"
+    for f in config.jsonc descargas.gif; do
+        src="$SCRIPT_DIR/fastfetch/$f"
+        if [ -f "$src" ]; then
+            cp "$src" "$HOME_DIR/.config/fastfetch/$f" && ok "$f"
+        else
+            warn "No encontrado: fastfetch/$f"
+        fi
+    done
+}
+
+# ── 3. Config .termux/ ─────────────────────────────────────
+step_termux_config() {
+    log 3 "Restaurando config .termux/..."
+    mkdir -p "$HOME_DIR/.termux/background" "$HOME_DIR/.termux/shell-integration"
+    cfg="$SCRIPT_DIR/termux_config"
+    for f in termux.properties termux-launcher-bindings.conf colors.properties font.ttf fonts.conf material-colors.sh material-colors.properties; do
+        [ -f "$cfg/$f" ] && cp "$cfg/$f" "$HOME_DIR/.termux/" && ok "$f"
+    done
+    [ -f "$cfg/background/background.jpeg" ] \
+        && cp "$cfg/background/background.jpeg" "$HOME_DIR/.termux/background/" && ok "background.jpeg"
+    [ -f "$cfg/shell-integration/termux-launcher.bash" ] \
+        && cp "$cfg/shell-integration/termux-launcher.bash" "$HOME_DIR/.termux/shell-integration/" && ok "termux-launcher.bash"
+    [ -f "$cfg/shell-integration/termux-launcher.zsh" ] \
+        && cp "$cfg/shell-integration/termux-launcher.zsh"  "$HOME_DIR/.termux/shell-integration/" && ok "termux-launcher.zsh"
+}
+
+# ── 4. Paquetes base ───────────────────────────────────────
+step_packages() {
+    log 4 "Actualizando e instalando paquetes base..."
+    pkg update -y && pkg upgrade -y
+    pkg install -y fish git curl fzf sqlite cowsay nyancat 2>/dev/null
+    ok "fish  git  curl  fzf  sqlite  cowsay  nyancat"
+}
+
+# ── 5. setup-launcher (showcase oficial) ──────────────────
+step_setup_launcher() {
+    log 5 "Instalando showcase oficial (Fish + OhMyPosh + Neovim + eza + zoxide)..."
+    cd "$HOME_DIR" || true
+    launcher="$SCRIPT_DIR/setup-launcher"
+    if [ ! -f "$launcher" ]; then
+        warn "Descargando setup-launcher..."
+        curl -fsSLO https://raw.githubusercontent.com/PickleHik3/termux-launcher/main/docs/en/examples/setup-launcher
+        launcher="$HOME_DIR/setup-launcher"
+    fi
+    # 1 = todo, y = fish como default
+    printf '1\ny\n' | sh "$launcher"
+    ok "Fish + OhMyPosh + zoxide + eza + Neovim + sigye + fastfetch + kitten"
+}
+
+# ── 6. Fish config + fastfetch al arrancar ─────────────────
+step_fish_config() {
+    log 6 "Configurando Fish + fastfetch al arrancar..."
+    mkdir -p "$HOME_DIR/.config/fish/conf.d"
+
+    cat > "$HOME_DIR/.config/fish/config.fish" << 'FISHCFG'
+# === Termux Launcher — config.fish ===
+if status is-interactive
+    # Oh My Posh (instalado por setup-launcher)
+    if command -q oh-my-posh
+        oh-my-posh init fish --config ~/.config/ohmyposh/aliens-material.omp.json | source
+    end
+    # Fastfetch al arrancar
+    fastfetch 2>/dev/null
+end
+FISHCFG
+    ok "config.fish → fastfetch al inicio"
+
+    PERSONAL="$HOME_DIR/.config/fish/conf.d/personal.fish"
+    if [ ! -f "$PERSONAL" ]; then
+        cat > "$PERSONAL" << 'PERSONAL_FISH'
+# === Configuración personal ===
+alias ll='ls -la'
+alias ..='cd ..'
+alias cls='clear'
+alias update='pkg update -y && pkg upgrade -y'
+alias horario='bash ~/horario.sh'
+alias gif='bash ~/gif-selector.sh'
+alias clip='bash ~/fzf_clipboard_scratchpad.sh'
+alias fix-media='fix-media'
+
+# Añadir ~/.local/bin al PATH (binarios de setup-launcher)
+set -gx PATH $HOME/.local/bin $PATH
+PERSONAL_FISH
+        ok "conf.d/personal.fish"
+    fi
+
+    ln -sf "$PREFIX/bin/fish" "$HOME_DIR/.termux/shell" 2>/dev/null
+    ok "Fish → shell predeterminado"
+}
+
+# ── 7. Core-Termux (al final) ──────────────────────────────
+step_core_termux() {
+    log 7 "Instalando Core-Termux..."
+    curl -fsSL https://raw.githubusercontent.com/DevCoreXOfficial/core-termux/main/install.sh | bash
+    ok "Core-Termux instalado"
+}
+
+# ══════════════════════════════════════════════════════════
+banner
+step_scripts
+step_fastfetch
+step_termux_config
+step_packages
+step_setup_launcher
+step_fish_config
+step_core_termux
+
+touch "$FLAG"
+
+clear
+echo ""
+cowsay "Todo listo. Reinicia la terminal." 2>/dev/null \
+    || printf '  \e[1;32m✅  Todo listo. Reinicia la terminal.\e[0m\n'
+echo ""
+printf '  \e[34m🐟 Shell:\e[0m       Fish (default)\n'
+printf '  \e[34m🎨 Fastfetch:\e[0m   corre al abrir terminal\n'
+printf '  \e[34m🌟 Showcase:\e[0m    Fish + OhMyPosh + Neovim + eza\n'
+printf '  \e[34m⚡ Core-Termux:\e[0m  instalado\n'
+printf '  \e[34m📋 Scripts:\e[0m     horario · gif-selector · portapapeles\n'
+echo ""
+nyancat 2>/dev/null &
+sleep 4
+kill %1 2>/dev/null
+echo ""

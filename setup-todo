@@ -186,9 +186,11 @@ PERSONAL_FISH
 # ── 7. Core-Termux (al final) ──────────────────────────────
 
 step_termux_ui() {
-    log 10 "Restaurando proporciones visuales y botones del teclado..."
-    
-    mkdir -p "$HOME_DIR/.termux"
+    echo -e "\n\e[1;33m❓ ¿Deseas restaurar la configuración visual (Teclas, Tamaños y Pinned Apps)? [S/n]: \e[0m\c"
+    read -r -t 15 resp_ui
+    if [[ "$resp_ui" =~ ^([sS]|)$ ]] || [[ -z "$resp_ui" ]]; then
+        log 10 "Restaurando proporciones visuales y botones del teclado..."
+        mkdir -p "$HOME_DIR/.termux"
     
     # 1. Configurar botones extras (termux.properties)
     cat << 'EOF' > "$HOME_DIR/.termux/termux.properties"
@@ -231,6 +233,9 @@ if os.path.exists(prefs):
     fi
     
     ok "Teclado e interfaz sincronizados (Tamaños personalizados aplicados) 🎛️"
+    else
+        warn "Omitiendo restauración visual y Pinned Apps."
+    fi
 }
 
 step_core_termux() {
@@ -290,9 +295,11 @@ step_recon_scraping() {
     fi
 
     # Herramientas de Fuzzing y Diccionarios
-    log 8.2 "Instalando Fuzzing (ffuf) y SecLists..."
-    
-    if [ ! -d "$HOME_DIR/wordlists/SecLists" ]; then
+    echo -e "\n\e[1;33m❓ ¿Deseas instalar el entorno de Fuzzing (Ffuf) y SecLists (~1GB)? [S/n]: \e[0m\c"
+    read -r -t 15 resp_fuzz
+    if [[ "$resp_fuzz" =~ ^([sS]|)$ ]] || [[ -z "$resp_fuzz" ]]; then
+        log 8.2 "Instalando Fuzzing (ffuf) y SecLists..."
+        if [ ! -d "$HOME_DIR/wordlists/SecLists" ]; then
         mkdir -p "$HOME_DIR/wordlists"
         warn "Descargando SecLists (~1GB). Mostrando progreso..."
         git clone --progress --depth 1 https://github.com/danielmiessler/SecLists.git "$HOME_DIR/wordlists/SecLists"
@@ -310,6 +317,9 @@ step_recon_scraping() {
         ok "Ffuf (Fuzzer ultrarrápido) instalado 🚀"
     else
         ok "Ffuf ya está instalado. ¡Omitiendo! ⚡"
+    fi
+    else
+        warn "Omitiendo instalación de Fuzzing y SecLists."
     fi
 }
 

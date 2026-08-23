@@ -90,27 +90,27 @@ step_packages() {
 
 # ── 5. setup-launcher (showcase oficial) ──────────────────
 step_setup_launcher() {
-    log 5 "Instalando showcase oficial descargando desde GitHub..."
+    log 5 "Verificando showcase oficial (Fish, OhMyPosh, Neovim)..."
     cd "$HOME_DIR" || true
     
-    # Descarga literal como pediste, directo al HOME del celular
-    curl -fsSLO https://raw.githubusercontent.com/PickleHik3/termux-launcher/main/docs/en/examples/setup-launcher
-    
-    # Ejecutar pasando 1 (Todo) y y (Fish Default)
-    sh setup-launcher << 'EOF'
+    if [ -x "$HOME_DIR/.local/bin/fastfetch" ] && [ -f "$HOME_DIR/.config/fish/config.fish" ]; then
+        ok "El showcase ya está instalado. ¡Omitiendo descarga pesada! ⚡"
+    else
+        warn "Descargando e instalando showcase desde GitHub..."
+        curl -fsSLO https://raw.githubusercontent.com/PickleHik3/termux-launcher/main/docs/en/examples/setup-launcher
+        sh setup-launcher << 'EOF' >/dev/null 2>&1
 1
 y
 EOF
+        ok "Showcase instalado correctamente"
+    fi
 
-    # FIX para fastfetch: setup-launcher lo instala en ~/.local/bin/fastfetch
-    # Creamos un enlace global para que funcione al instante en cualquier lado
+    # Enlaces globales
     for bin in fastfetch sigye kitten setup-nvim; do
         if [ -f "$HOME_DIR/.local/bin/$bin" ]; then
             ln -sf "$HOME_DIR/.local/bin/$bin" "$PREFIX/bin/$bin"
         fi
     done
-    
-    ok "setup-launcher ejecutado correctamente"
 }
 
 # ── 6. Fish config + fastfetch al arrancar ─────────────────
@@ -176,17 +176,27 @@ PERSONAL_FISH
 
 # ── 7. Core-Termux (al final) ──────────────────────────────
 step_core_termux() {
-    log 7 "Instalando Core-Termux y Agentes de IA..."
-    curl -fsSL https://raw.githubusercontent.com/DevCoreXOfficial/core-termux/main/install.sh | bash
+    log 7 "Verificando Core-Termux y Agentes de IA..."
     
     if [ -x "$PREFIX/bin/core" ]; then
-        log 7 "Instalando IA: opencode, kilocode-cli, freebuff..."
-        "$PREFIX/bin/core" install ai --opencode --kilocode-cli --freebuff
-        ok "Agentes de IA instalados"
+        ok "Core-Termux ya está instalado. ¡Omitiendo reinstalación! ⚡"
     else
-        warn "No se encontró el comando 'core'. Las herramientas de IA no se instalaron."
+        warn "Instalando motor Core-Termux..."
+        curl -fsSL https://raw.githubusercontent.com/DevCoreXOfficial/core-termux/main/install.sh | bash >/dev/null 2>&1
     fi
-    ok "Core-Termux listo"
+    
+    if [ -x "$PREFIX/bin/core" ]; then
+        log 7.1 "Sincronizando módulos de IA (opencode, kilocode, freebuff, antigravity-cli)..."
+        "$PREFIX/bin/core" install ai --opencode --kilocode-cli --freebuff --antigravity-cli
+        ok "Asistentes de IA listos y actualizados 🤖"
+        
+        log 7.2 "Sincronizando herramientas Dev (core install dev)..."
+        "$PREFIX/bin/core" install dev
+        ok "Herramientas de desarrollo instaladas 🛠️"
+    else
+        warn "Fallo crítico: No se encontró 'core'. Saltando IA y Dev."
+    fi
+    ok "¡Ecosistema Core-Termux al 100%!"
 }
 
 # ══════════════════════════════════════════════════════════

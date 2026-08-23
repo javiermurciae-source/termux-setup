@@ -74,8 +74,8 @@ step_termux_config() {
 step_packages() {
     log 4 "Actualizando e instalando paquetes base..."
     pkg update -y && pkg upgrade -y
-    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api 2>/dev/null
-    ok "fish  git  curl  fzf  sqlite  cowsay  nyancat  termux-api"
+    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi 2>/dev/null
+    ok "fish  git  curl  fzf  sqlite  cowsay  nyancat  termux-api  yazi"
 }
 
 # ── 5. setup-launcher (showcase oficial) ──────────────────

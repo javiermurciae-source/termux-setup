@@ -83,7 +83,7 @@ step_packages() {
     pkg install -y glibc proot 2>/dev/null
     
     # Herramientas generales + Root + ADB
-    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi tsu android-tools python ruby jq 2>/dev/null
+    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang 2>/dev/null
     
     ok "Paquetes instalados (incluyendo sudo/tsu y ADB)"
 }
@@ -235,6 +235,26 @@ step_recon_scraping() {
     else
         ok "WhatWeb ya está instalado. ¡Omitiendo descarga! ⚡"
     fi
+
+    # Herramientas de Fuzzing y Diccionarios
+    log 8.2 "Instalando Fuzzing (ffuf) y SecLists..."
+    
+    if [ ! -d "$HOME_DIR/wordlists/SecLists" ]; then
+        mkdir -p "$HOME_DIR/wordlists"
+        git clone --depth 1 https://github.com/danielmiessler/SecLists.git "$HOME_DIR/wordlists/SecLists" >/dev/null 2>&1
+        ok "Diccionarios de SecLists descargados 📚"
+    else
+        ok "SecLists ya está descargado. ¡Omitiendo! ⚡"
+    fi
+
+    if [ ! -x "$PREFIX/bin/ffuf" ]; then
+        export GOPATH="$HOME_DIR/go"
+        go install github.com/ffuf/ffuf/v2@latest >/dev/null 2>&1
+        ln -sf "$GOPATH/bin/ffuf" "$PREFIX/bin/ffuf" 2>/dev/null
+        ok "Ffuf (Fuzzer ultrarrápido) instalado 🚀"
+    else
+        ok "Ffuf ya está instalado. ¡Omitiendo! ⚡"
+    fi
 }
 
 step_core_termux
@@ -251,7 +271,7 @@ printf '  \e[34m🐟 Shell:\e[0m       Fish (default)\n'
 printf '  \e[34m🎨 Fastfetch:\e[0m   corre al abrir terminal\n'
 printf '  \e[34m🌟 Showcase:\e[0m    Fish + OhMyPosh + Neovim + eza\n'
 printf '  \e[34m⚡ Core-Termux:\e[0m  instalado\n'
-printf '  \e[34m🕵️ Recon & Scraping:\e[0m Python, WhatWeb, jq instalados\n'
+printf '  \e[34m🕵️ Recon & Fuzzing:\e[0m WhatWeb, Nmap, Ffuf y SecLists listos\n'
 printf '  \e[34m📋 Scripts:\e[0m     horario · gif-selector · portapapeles\n'
 echo ""
 nyancat 2>/dev/null &

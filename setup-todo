@@ -156,7 +156,12 @@ PERSONAL_FISH
     fi
 
     ln -sf "$PREFIX/bin/fish" "$HOME_DIR/.termux/shell" 2>/dev/null
-    ok "Fish → shell predeterminado"
+    
+    # Eliminar mensaje de bienvenida (MOTD) de Termux
+    touch "$HOME_DIR/.hushlogin"
+    rm -f "$PREFIX/etc/motd" 2>/dev/null
+    
+    ok "Fish → shell predeterminado (Mensaje de bienvenida ocultado)"
 }
 
 # ── 7. Core-Termux (al final) ──────────────────────────────

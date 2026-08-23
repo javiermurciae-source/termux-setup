@@ -93,6 +93,12 @@ step_setup_launcher() {
     log 5 "Verificando showcase oficial (Fish, OhMyPosh, Neovim)..."
     cd "$HOME_DIR" || true
     
+    # Auto-reparación: Si el config.fish fue corrompido por el sed antiguo (falta la función base), lo borramos para forzar su regeneración.
+    if [ -f "$HOME_DIR/.config/fish/config.fish" ] && ! grep -q "function __move_cursor_to_bottom" "$HOME_DIR/.config/fish/config.fish"; then
+        rm -f "$HOME_DIR/.config/fish/config.fish"
+        warn "Se detectó un config.fish corrupto. Reparando..."
+    fi
+    
     if [ -x "$HOME_DIR/.local/bin/fastfetch" ] && [ -f "$HOME_DIR/.config/fish/config.fish" ]; then
         ok "El showcase ya está instalado. ¡Omitiendo descarga pesada! ⚡"
     else
@@ -120,18 +126,19 @@ step_fish_config() {
     # Redefinir el saludo directamente al final para un encuadre perfecto sin romper sintaxis
     FISH_CFG="$HOME_DIR/.config/fish/config.fish"
     if [ -f "$FISH_CFG" ]; then
-        # Limpiar cualquier arreglo anterior nuestro
-        sed -i '/Redefinir el saludo/,/end/d' "$FISH_CFG" 2>/dev/null
+        # Limpiar cualquier arreglo anterior nuestro usando un bloque seguro
+        sed -i '/# INICIO_SALUDO_AGY/,/# FIN_SALUDO_AGY/d' "$FISH_CFG" 2>/dev/null
         
         cat >> "$FISH_CFG" << 'FISH_GREETING'
 
-# Redefinir el saludo para mostrar solo Fastfetch bien encuadrado
+# INICIO_SALUDO_AGY
 if status is-interactive
     function fish_greeting
         command clear
         fastfetch 2>/dev/null
     end
 end
+# FIN_SALUDO_AGY
 FISH_GREETING
         ok "fastfetch añadido al inicio (fish_greeting)"
     fi

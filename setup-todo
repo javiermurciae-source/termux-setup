@@ -167,6 +167,9 @@ alias codc='bash ~/verificar-cod.sh'
 alias sync-setup='cd ~/termux-setup && git pull && rm -f ~/.core_setup_done && ./setup-todo'
 
 set -gx PATH $HOME/.local/bin $PATH
+
+# Variables de entorno Java (Requeridas por Apktool y Jadx)
+set -gx JAVA_HOME $PREFIX
 PERSONAL_FISH
     ok "Alias y rutas de sistema sincronizados (personal.fish)"
 

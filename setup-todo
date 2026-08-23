@@ -257,8 +257,35 @@ step_recon_scraping() {
     fi
 }
 
+
+step_advanced_lab() {
+    log 9 "Instalando Laboratorio Avanzado (Redes, Ing. Inversa y Desarrollo)..."
+
+    # 1. Analista de Red (Sniffers)
+    log 9.1 "Instalando Analizadores de Red (tcpdump, tshark)..."
+    pkg install -y tcpdump tshark >/dev/null 2>&1
+    
+    # 2. Creación de Apps (Java JDK y Gradle)
+    log 9.2 "Instalando Java JDK 17 y compilador Gradle..."
+    pkg install -y openjdk-17 gradle >/dev/null 2>&1
+    
+    # 3. Ingeniería Inversa (Apktool y Jadx)
+    log 9.3 "Instalando descompiladores (apktool, jadx)..."
+    pkg install -y apktool jadx >/dev/null 2>&1
+    
+    # Fallback seguro para apktool si no está en el repo base
+    if ! command -v apktool >/dev/null 2>&1; then
+        wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O $PREFIX/bin/apktool
+        wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O $PREFIX/bin/apktool.jar
+        chmod +x $PREFIX/bin/apktool $PREFIX/bin/apktool.jar
+    fi
+
+    ok "Laboratorio Avanzado listo 🔬 (tcpdump, java, gradle, apktool)"
+}
+
 step_core_termux
 step_recon_scraping
+step_advanced_lab
 
 touch "$FLAG"
 
@@ -272,6 +299,7 @@ printf '  \e[34m🎨 Fastfetch:\e[0m   corre al abrir terminal\n'
 printf '  \e[34m🌟 Showcase:\e[0m    Fish + OhMyPosh + Neovim + eza\n'
 printf '  \e[34m⚡ Core-Termux:\e[0m  instalado\n'
 printf '  \e[34m🕵️ Recon & Fuzzing:\e[0m WhatWeb, Nmap, Ffuf y SecLists listos\n'
+printf '  \e[34m🔬 Lab Avanzado:\e[0m    Java, Gradle, Apktool, tcpdump\n'
 printf '  \e[34m📋 Scripts:\e[0m     horario · gif-selector · portapapeles\n'
 echo ""
 nyancat 2>/dev/null &

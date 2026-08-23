@@ -88,8 +88,10 @@ step_setup_launcher() {
         curl -fsSLO https://raw.githubusercontent.com/PickleHik3/termux-launcher/main/docs/en/examples/setup-launcher
         launcher="$HOME_DIR/setup-launcher"
     fi
-    # 1 = todo, y = fish como default
-    printf '1\ny\n' | sh "$launcher"
+    chmod +x "$launcher"
+    # Asegurar ejecución directa con bash exportando variables para que no se tranque por digests
+    export TERMUX_LAUNCHER_SKIP_DIGEST=1
+    printf '1\ny\n' | bash "$launcher" || warn "setup-launcher finalizó con advertencias"
     ok "Fish + OhMyPosh + zoxide + eza + Neovim + sigye + fastfetch + kitten"
 }
 

@@ -1,4 +1,4 @@
-#!/system/bin/sh
+#!/data/data/com.termux/files/usr/bin/bash
 # setup-launcher — Termux Launcher shell environment installer.
 #
 # Three choices: everything, the shell essentials, or one item at a time.

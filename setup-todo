@@ -230,6 +230,7 @@ step_recon_scraping() {
         
         # Dependencias de Ruby para WhatWeb
         gem install bundler >/dev/null 2>&1
+        cd "$HOME_DIR/.local/share/WhatWeb" && bundle install >/dev/null 2>&1
         ok "WhatWeb (Reconocimiento Web) instalado correctamente 🕵️"
     else
         ok "WhatWeb ya está instalado. ¡Omitiendo descarga! ⚡"

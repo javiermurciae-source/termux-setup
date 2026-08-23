@@ -117,13 +117,22 @@ EOF
 step_fish_config() {
     log 6 "Configurando Fish + fastfetch al arrancar..."
     
-    # Inyectar fastfetch al final de la función fish_greeting del config.fish oficial
+    # Redefinir el saludo directamente al final para un encuadre perfecto sin romper sintaxis
     FISH_CFG="$HOME_DIR/.config/fish/config.fish"
     if [ -f "$FISH_CFG" ]; then
-        # Remover fastfetch si ya existe para evitar duplicados
-        sed -i '/fastfetch/d' "$FISH_CFG"
-        # Quitar el cursor al fondo y asegurar un clear justo antes del fastfetch para encuadre perfecto
-        sed -i 's/.*__move_cursor_to_bottom.*/        command clear\n        fastfetch 2>\/dev\/null/g' "$FISH_CFG"
+        # Limpiar cualquier arreglo anterior nuestro
+        sed -i '/Redefinir el saludo/,/end/d' "$FISH_CFG" 2>/dev/null
+        
+        cat >> "$FISH_CFG" << 'FISH_GREETING'
+
+# Redefinir el saludo para mostrar solo Fastfetch bien encuadrado
+if status is-interactive
+    function fish_greeting
+        command clear
+        fastfetch 2>/dev/null
+    end
+end
+FISH_GREETING
         ok "fastfetch añadido al inicio (fish_greeting)"
     fi
 

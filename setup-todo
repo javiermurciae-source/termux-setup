@@ -106,24 +106,24 @@ EOF
 # ── 6. Fish config + fastfetch al arrancar ─────────────────
 step_fish_config() {
     log 6 "Configurando Fish + fastfetch al arrancar..."
-    mkdir -p "$HOME_DIR/.config/fish/conf.d"
-
-    cat > "$HOME_DIR/.config/fish/config.fish" << 'FISHCFG'
-# === Termux Launcher — config.fish ===
-if status is-interactive
-    # Oh My Posh (instalado por setup-launcher)
-    if command -q oh-my-posh
-        oh-my-posh init fish --config ~/.config/ohmyposh/aliens-material.omp.json | source
-    end
-    # Fastfetch al arrancar
-    fastfetch 2>/dev/null
-end
-FISHCFG
-    ok "config.fish → fastfetch al inicio"
+    
+    # Inyectar fastfetch al final de la función fish_greeting del config.fish oficial
+    FISH_CFG="$HOME_DIR/.config/fish/config.fish"
+    if [ -f "$FISH_CFG" ]; then
+        # Remover fastfetch si ya existe para evitar duplicados
+        sed -i '/fastfetch/d' "$FISH_CFG"
+        # Añadirlo justo después de __move_cursor_to_bottom en fish_greeting
+        sed -i '/__move_cursor_to_bottom/a \        fastfetch 2>/dev/null' "$FISH_CFG"
+        ok "fastfetch añadido al inicio (fish_greeting)"
+    fi
 
     PERSONAL="$HOME_DIR/.config/fish/conf.d/personal.fish"
-    if [ ! -f "$PERSONAL" ]; then
-        cat > "$PERSONAL" << 'PERSONAL_FISH'
+    mkdir -p "$HOME_DIR/.config/fish/conf.d"
+    touch "$PERSONAL"
+    # Añadir siempre nuestros alias al personal.fish si no están
+    if ! grep -q "horario" "$PERSONAL" 2>/dev/null; then
+        cat >> "$PERSONAL" << 'PERSONAL_FISH'
+
 # === Configuración personal ===
 alias ll='ls -la'
 alias ..='cd ..'
@@ -133,11 +133,9 @@ alias horario='bash ~/horario.sh'
 alias gif='bash ~/gif-selector.sh'
 alias clip='bash ~/fzf_clipboard_scratchpad.sh'
 alias fix-media='fix-media'
-
-# Añadir ~/.local/bin al PATH (binarios de setup-launcher)
 set -gx PATH $HOME/.local/bin $PATH
 PERSONAL_FISH
-        ok "conf.d/personal.fish"
+        ok "alias añadidos a personal.fish"
     fi
 
     ln -sf "$PREFIX/bin/fish" "$HOME_DIR/.termux/shell" 2>/dev/null

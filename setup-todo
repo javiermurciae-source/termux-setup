@@ -72,17 +72,20 @@ step_termux_config() {
 
 # ── 4. Paquetes base ───────────────────────────────────────
 step_packages() {
-    log 4 "Actualizando e instalando paquetes base y glibc..."
-    pkg update -y && pkg upgrade -y
+    log 4 "Actualizando e instalando paquetes base, glibc y herramientas Root/ADB..."
+    pkg update -y && pkg upgrade -y 2>/dev/null
     
-    # Pre-instalar glibc-repo y actualizar lista ANTES de instalar paquetes
-    # (Esto soluciona el error 'Failed to install glibc' de Core-Termux)
-    pkg install -y glibc-repo 2>/dev/null
+    # Repositorios extra
+    pkg install -y root-repo glibc-repo 2>/dev/null
     pkg update -y 2>/dev/null
+    
+    # Paquetes base y glibc
     pkg install -y glibc proot 2>/dev/null
     
-    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi 2>/dev/null
-    ok "Paquetes base, glibc y dependencias instalados"
+    # Herramientas generales + Root + ADB
+    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi tsu android-tools 2>/dev/null
+    
+    ok "Paquetes instalados (incluyendo sudo/tsu y ADB)"
 }
 
 # ── 5. setup-launcher (showcase oficial) ──────────────────
@@ -140,6 +143,12 @@ alias horario='bash ~/horario.sh'
 alias gif='bash ~/gif-selector.sh'
 alias clip='bash ~/fzf_clipboard_scratchpad.sh'
 alias fix-media='fix-media'
+
+# Root & ADB
+alias s='sudo'
+alias adbs='adb shell'
+alias adbd='adb devices'
+alias adbw='adb tcpip 5555 && adb connect'
 alias codc='bash ~/verificar-cod.sh'
 set -gx PATH $HOME/.local/bin $PATH
 PERSONAL_FISH

@@ -150,6 +150,7 @@ alias adbs='adb shell'
 alias adbd='adb devices'
 alias adbw='adb tcpip 5555 && adb connect'
 alias codc='bash ~/verificar-cod.sh'
+alias sync-setup='cd ~/termux-setup && git pull && rm -f ~/.core_setup_done && ./setup-todo'
 set -gx PATH $HOME/.local/bin $PATH
 PERSONAL_FISH
         ok "alias añadidos a personal.fish"

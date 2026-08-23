@@ -184,6 +184,53 @@ PERSONAL_FISH
 }
 
 # ── 7. Core-Termux (al final) ──────────────────────────────
+
+step_termux_ui() {
+    log 10 "Restaurando proporciones visuales y botones del teclado..."
+    
+    mkdir -p "$HOME_DIR/.termux"
+    
+    # 1. Configurar botones extras (termux.properties)
+    cat << 'EOF' > "$HOME_DIR/.termux/termux.properties"
+fullscreen=false
+extra-keys=[[{"key":"KEYBOARD","display":"󰥻","popup":{"key":"tool:terminal.select_at_cursor","display":"󱈅"}},{"key":"tool:pane.split_horizontal","display":"󰯌","popup":{"key":"tool:pane.split_vertical","display":"Split pane vertically"}},{"key":"tool:pane.kill_focused","display":"","popup":{"key":"tool:session.new","display":"New session"}},{"key":"tool:terminal.search_scrollback","display":"󱎸","popup":{"key":"tool:terminal.hints","display":"󰌹"}},{"key":"tool:workspace.picker","display":"","popup":{"key":"tool:clipboard.paste","display":"Paste"}},{"key":"tool:terminal.toggle_scratchpad","display":"󱞂","popup":{"key":"tool:pane.toggle_float","display":"󰹗"}}]]
+extra-keys2=[]
+EOF
+    
+    # 2. Configurar tamaños de la interfaz (Preferences XML)
+    PREFS="/data/data/com.termux/shared_prefs/com.termux_preferences.xml"
+    if [ -f "$PREFS" ] && command -v python >/dev/null 2>&1; then
+        python -c "
+import xml.etree.ElementTree as ET
+import os
+
+prefs = '$PREFS'
+if os.path.exists(prefs):
+    tree = ET.parse(prefs)
+    root = tree.getroot()
+    
+    def set_val(tag, name, val):
+        for elem in root.findall(tag):
+            if elem.get('name') == name:
+                elem.set('value', val)
+                return
+        new_elem = ET.SubElement(root, tag)
+        new_elem.set('name', name)
+        new_elem.set('value', val)
+        
+    set_val('float', 'in_app_keyboard_height_scale', '0.709')
+    set_val('float', 'in_app_keyboard_key_margin_scale', '2.96')
+    set_val('int', 'in_app_keyboard_horizontal_inset', '13')
+    set_val('float', 'in_app_keyboard_key_corner_radius_dp', '2.7')
+    set_val('float', 'app_launcher_bar_height', '1.72')
+    
+    tree.write(prefs, encoding='utf-8', xml_declaration=True)
+" 2>/dev/null
+    fi
+    
+    ok "Teclado e interfaz sincronizados (Tamaños personalizados aplicados) 🎛️"
+}
+
 step_core_termux() {
     log 7 "Verificando Core-Termux y Agentes de IA..."
     
@@ -311,6 +358,7 @@ step_advanced_lab() {
 step_core_termux
 step_recon_scraping
 step_advanced_lab
+step_termux_ui
 
 touch "$FLAG"
 

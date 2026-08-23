@@ -245,7 +245,7 @@ step_core_termux() {
         ok "Core-Termux ya está instalado. ¡Omitiendo reinstalación! ⚡"
     else
         warn "Instalando motor Core-Termux..."
-        curl -fsSL https://raw.githubusercontent.com/DevCoreXOfficial/core-termux/main/install.sh | bash >/dev/null 2>&1
+        curl -fSL https://raw.githubusercontent.com/DevCoreXOfficial/core-termux/main/install.sh | bash
     fi
     
     if [ -x "$PREFIX/bin/core" ]; then

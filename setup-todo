@@ -139,10 +139,8 @@ FISH_GREETING
     PERSONAL="$HOME_DIR/.config/fish/conf.d/personal.fish"
     mkdir -p "$HOME_DIR/.config/fish/conf.d"
     touch "$PERSONAL"
-    # Añadir siempre nuestros alias al personal.fish si no están
-    if ! grep -q "horario" "$PERSONAL" 2>/dev/null; then
-        cat >> "$PERSONAL" << 'PERSONAL_FISH'
-
+    # Sobrescribir siempre el archivo de alias para asegurar que estén actualizados
+    cat > "$PERSONAL" << 'PERSONAL_FISH'
 # === Configuración personal ===
 alias ll='ls -la'
 alias ..='cd ..'
@@ -160,10 +158,11 @@ alias adbd='adb devices'
 alias adbw='adb tcpip 5555 && adb connect'
 alias codc='bash ~/verificar-cod.sh'
 alias sync-setup='cd ~/termux-setup && git pull && rm -f ~/.core_setup_done && ./setup-todo'
+
 set -gx PATH $HOME/.local/bin $PATH
 PERSONAL_FISH
-        ok "alias añadidos a personal.fish"
-    fi
+    ok "Alias y rutas de sistema sincronizados (personal.fish)"
+
 
     ln -sf "$PREFIX/bin/fish" "$HOME_DIR/.termux/shell" 2>/dev/null
     

@@ -256,7 +256,8 @@ step_core_termux() {
         log 7.2 "Sincronizando herramientas Dev (core install dev)..."
         "$PREFIX/bin/core" install dev
         "$PREFIX/bin/core" install npm
-        ok "Herramientas de desarrollo (Dev, NPM) instaladas 🛠️"
+        "$PREFIX/bin/core" install lang
+        ok "Herramientas de desarrollo (Dev, NPM, Lang) instaladas 🛠️"
     else
         warn "Fallo crítico: No se encontró 'core'. Saltando IA y Dev."
     fi

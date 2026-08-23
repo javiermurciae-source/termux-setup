@@ -133,6 +133,7 @@ alias horario='bash ~/horario.sh'
 alias gif='bash ~/gif-selector.sh'
 alias clip='bash ~/fzf_clipboard_scratchpad.sh'
 alias fix-media='fix-media'
+alias codc='bash ~/verificar-cod.sh'
 set -gx PATH $HOME/.local/bin $PATH
 PERSONAL_FISH
         ok "alias añadidos a personal.fish"

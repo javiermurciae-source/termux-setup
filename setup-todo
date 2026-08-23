@@ -269,18 +269,36 @@ step_advanced_lab() {
     pkg install -y tcpdump tshark >/dev/null 2>&1
     
     # 2. Creación de Apps (Java JDK y Gradle)
-    log 9.2 "Instalando Java JDK 17 y compilador Gradle..."
-    pkg install -y openjdk-17 gradle >/dev/null 2>&1
+    if ! command -v gradle >/dev/null 2>&1; then
+        log 9.2 "Instalando Java JDK 17 y compilador Gradle (Esto tardará un momento)..."
+        pkg install -y openjdk-17 gradle
+    else
+        ok "Java y Gradle ya instalados. ¡Omitiendo! ⚡"
+    fi
     
     # 3. Ingeniería Inversa (Apktool y Jadx)
     log 9.3 "Instalando descompiladores (apktool, jadx)..."
-    pkg install -y apktool jadx >/dev/null 2>&1
+    # Habilitar repositorio TUR que contiene estas herramientas
+    pkg install -y tur-repo >/dev/null 2>&1
+    pkg update -y >/dev/null 2>&1
     
-    # Fallback seguro para apktool si no está en el repo base
+    if ! command -v jadx >/dev/null 2>&1; then
+        pkg install -y jadx
+    else
+        ok "Jadx ya instalado. ¡Omitiendo! ⚡"
+    fi
+
     if ! command -v apktool >/dev/null 2>&1; then
-        wget --show-progress -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O $PREFIX/bin/apktool
-        wget --show-progress -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O $PREFIX/bin/apktool.jar
-        chmod +x $PREFIX/bin/apktool $PREFIX/bin/apktool.jar
+        pkg install -y apktool
+        # Fallback manual si el repo falla
+        if ! command -v apktool >/dev/null 2>&1; then
+            warn "Descargando Apktool de forma manual..."
+            wget --show-progress -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O $PREFIX/bin/apktool
+            wget --show-progress -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O $PREFIX/bin/apktool.jar
+            chmod +x $PREFIX/bin/apktool $PREFIX/bin/apktool.jar
+        fi
+    else
+        ok "Apktool ya instalado. ¡Omitiendo! ⚡"
     fi
 
     ok "Laboratorio Avanzado listo 🔬 (tcpdump, java, gradle, apktool)"

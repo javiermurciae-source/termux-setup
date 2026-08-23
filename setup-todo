@@ -83,7 +83,7 @@ step_packages() {
     pkg install -y glibc proot 2>/dev/null
     
     # Herramientas generales + Root + ADB
-    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi tsu android-tools 2>/dev/null
+    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi tsu android-tools python ruby jq 2>/dev/null
     
     ok "Paquetes instalados (incluyendo sudo/tsu y ADB)"
 }
@@ -213,7 +213,31 @@ step_termux_config
 step_packages
 step_setup_launcher
 step_fish_config
+
+step_recon_scraping() {
+    log 8 "Instalando entorno de Web Scraping y Reconocimiento (WhatWeb)..."
+    
+    # Librerías de Python para Scraping (requests, bs4)
+    pip install --upgrade pip >/dev/null 2>&1
+    pip install requests beautifulsoup4 >/dev/null 2>&1
+    ok "Librerías de Python para Scraping instaladas"
+    
+    # Instalación de WhatWeb (Escáner de huellas y tecnologías web)
+    if [ ! -d "$HOME_DIR/.local/share/WhatWeb" ]; then
+        log 8.1 "Descargando WhatWeb desde GitHub..."
+        git clone --depth 1 https://github.com/urbanadventurer/WhatWeb.git "$HOME_DIR/.local/share/WhatWeb" >/dev/null 2>&1
+        ln -sf "$HOME_DIR/.local/share/WhatWeb/whatweb" "$PREFIX/bin/whatweb"
+        
+        # Dependencias de Ruby para WhatWeb
+        gem install bundler >/dev/null 2>&1
+        ok "WhatWeb (Reconocimiento Web) instalado correctamente 🕵️"
+    else
+        ok "WhatWeb ya está instalado. ¡Omitiendo descarga! ⚡"
+    fi
+}
+
 step_core_termux
+step_recon_scraping
 
 touch "$FLAG"
 
@@ -226,6 +250,7 @@ printf '  \e[34m🐟 Shell:\e[0m       Fish (default)\n'
 printf '  \e[34m🎨 Fastfetch:\e[0m   corre al abrir terminal\n'
 printf '  \e[34m🌟 Showcase:\e[0m    Fish + OhMyPosh + Neovim + eza\n'
 printf '  \e[34m⚡ Core-Termux:\e[0m  instalado\n'
+printf '  \e[34m🕵️ Recon & Scraping:\e[0m Python, WhatWeb, jq instalados\n'
 printf '  \e[34m📋 Scripts:\e[0m     horario · gif-selector · portapapeles\n'
 echo ""
 nyancat 2>/dev/null &

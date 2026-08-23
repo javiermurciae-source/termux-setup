@@ -103,8 +103,8 @@ step_setup_launcher() {
         ok "El showcase ya está instalado. ¡Omitiendo descarga pesada! ⚡"
     else
         warn "Descargando e instalando showcase desde GitHub..."
-        curl -fsSLO https://raw.githubusercontent.com/PickleHik3/termux-launcher/main/docs/en/examples/setup-launcher
-        sh setup-launcher << 'EOF' >/dev/null 2>&1
+        curl -fSLO https://raw.githubusercontent.com/PickleHik3/termux-launcher/main/docs/en/examples/setup-launcher
+        sh setup-launcher << 'EOF'
 1
 y
 EOF

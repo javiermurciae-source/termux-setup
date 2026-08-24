@@ -355,56 +355,74 @@ import email
 from email.header import decode_header
 import getpass
 import sys
+import json
+import os
+
+CONFIG_FILE = os.path.expanduser("~/.config/mail_config.json")
+IMAP_SERVER = "imap.gmail.com"
+IMAP_PORT = 993
 
 print("=" * 50)
-print("       📬 LECTOR INTERACTIVO DE CORREO (IMAP) 📬")
+print("       📬 LECTOR DIRECTO DE GMAIL (IMAP) 📬")
 print("=" * 50 + "\n")
 
-# 1. Servidor IMAP
-server_input = input("🌐 Servidor IMAP [Enter para imap.gmail.com]: ").strip()
-IMAP_SERVER = server_input if server_input else "imap.gmail.com"
-
-# 2. Puerto IMAP
-port_input = input("🔌 Puerto SSL [Enter para 993]: ").strip()
-IMAP_PORT = int(port_input) if port_input.isdigit() else 993
-
-# 3. Correo Electronico
-EMAIL_USER = input("📧 Correo electronico completo (ej: tu@dominio.com / user@gmail.com): ").strip()
-while not EMAIL_USER:
-    EMAIL_USER = input("⚠️ El correo es obligatorio: ").strip()
-
-# 4. Contrasena
-try:
-    EMAIL_PASS = getpass.getpass("🔑 Contrasena o App Password: ").strip()
-except Exception:
-    EMAIL_PASS = input("🔑 Contrasena o App Password: ").strip()
-
-while not EMAIL_PASS:
+# Cargar credenciales guardadas si existen
+config = {}
+if os.path.exists(CONFIG_FILE):
     try:
-        EMAIL_PASS = getpass.getpass("⚠️ La contrasena es obligatoria: ").strip()
+        with open(CONFIG_FILE, "r") as f:
+            config = json.load(f)
     except Exception:
-        EMAIL_PASS = input("⚠️ La contrasena es obligatoria: ").strip()
+        config = {}
 
-# 5. Cantidad de correos a leer
-count_input = input("🔢 Cuantos correos recientes deseas leer? [Enter para 3]: ").strip()
-COUNT = int(count_input) if count_input.isdigit() and int(count_input) > 0 else 3
+EMAIL_USER = config.get("email")
+EMAIL_PASS = config.get("password")
+
+# Si no hay credenciales guardadas o el usuario pasa --reset
+if not EMAIL_USER or not EMAIL_PASS or "--reset" in sys.argv or "-r" in sys.argv:
+    print("⚙️  Configuración de Cuenta (Solo se pide la primera vez)\n")
+    EMAIL_USER = input("📧 Correo de Gmail: ").strip()
+    while not EMAIL_USER:
+        EMAIL_USER = input("⚠️ El correo es obligatorio: ").strip()
+
+    try:
+        EMAIL_PASS = getpass.getpass("🔑 Contraseña de Aplicación (16 letras): ").strip()
+    except Exception:
+        EMAIL_PASS = input("🔑 Contraseña de Aplicación (16 letras): ").strip()
+
+    while not EMAIL_PASS:
+        try:
+            EMAIL_PASS = getpass.getpass("⚠️ La contraseña es obligatoria: ").strip()
+        except Exception:
+            EMAIL_PASS = input("⚠️ La contraseña es obligatoria: ").strip()
+
+    # Guardar persistente
+    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+    with open(CONFIG_FILE, "w") as f:
+        json.dump({"email": EMAIL_USER, "password": EMAIL_PASS}, f)
+    os.chmod(CONFIG_FILE, 0o600)
+    print("💾 Credenciales guardadas localmente en ~/.config/mail_config.json\n")
+else:
+    print(f"👤 Conectando como: {EMAIL_USER} (Usa 'readmail --reset' para cambiar de cuenta)")
+
+COUNT = 5
 
 try:
-    print(f"\n⏳ Conectando a {IMAP_SERVER}:{IMAP_PORT} como {EMAIL_USER}...")
+    print(f"⏳ Conectando a {IMAP_SERVER}...")
     mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
     mail.login(EMAIL_USER, EMAIL_PASS)
     mail.select("inbox")
 
     status, messages = mail.search(None, "ALL")
     if status != "OK" or not messages[0]:
-        print("📭 La bandeja de entrada esta vacia.")
+        print("📭 La bandeja de entrada está vacía.")
         mail.logout()
         sys.exit(0)
 
     mail_ids = messages[0].split()
     latest_ids = mail_ids[-COUNT:]
 
-    print(f"\n📩 Mostrando los ultimos {len(latest_ids)} correos recibidos:\n")
+    print(f"\n📩 --- ÚLTIMOS {len(latest_ids)} CORREOS DE GMAIL --- 📩\n")
     print("=" * 60)
 
     for mail_id in reversed(latest_ids):
@@ -413,7 +431,7 @@ try:
             if isinstance(response_part, tuple):
                 msg = email.message_from_bytes(response_part[1])
                 
-                # Decodificar Asunto
+                # Asunto
                 raw_subject = msg.get("Subject", "(Sin Asunto)")
                 subject, encoding = decode_header(raw_subject)[0]
                 if isinstance(subject, bytes):
@@ -423,7 +441,7 @@ try:
                 sender = msg.get("From", "(Desconocido)")
                 date_str = msg.get("Date", "")
 
-                # Extraer cuerpo del correo
+                # Cuerpo del correo
                 body = ""
                 if msg.is_multipart():
                     for part in msg.walk():
@@ -453,10 +471,12 @@ try:
                 print("=" * 60)
 
     mail.logout()
-    print("✅ Lectura finalizada con exito.\n")
+    print("✅ Lectura finalizada con éxito.\n")
 
 except Exception as e:
-    print(f"\n❌ Error de conexion o autenticacion: {e}\n")
+    print(f"\n❌ Error: {e}\n")
+    if "AUTHENTICATIONFAILED" in str(e):
+        print("💡 Tip: Para reconfigurar la clave escribe: readmail --reset")
 OTP_EOF
 chmod +x "$HOME_DIR/leer-correo.sh"
     ln -sf "$HOME_DIR/leer-correo.sh" "$PREFIX/bin/readmail"

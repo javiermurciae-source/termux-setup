@@ -786,6 +786,15 @@ chmod +x "$HOME_DIR/leer-correo.sh"
     ln -sf "$HOME_DIR/leer-correo.sh" "$PREFIX/bin/leer-correo"
     ok "Lector de correos IMAP instalado (Comando: readmail / mail) 📬"
 
+    # EAS CLI (Expo Application Services para desarrollo móvil nativo en la nube)
+    if command -v npm >/dev/null 2>&1; then
+        if ! command -v eas >/dev/null 2>&1; then
+            log 8.9 "Instalando EAS CLI para compilación de apps móviles React Native / Expo..."
+            npm install -g eas-cli 2>/dev/null || true
+            ok "EAS CLI instalado exitosamente 📱"
+        fi
+    fi
+
     # CLI-Inbox (Gestor de Gmail en Python moderno con TUI)
     if [ ! -d "$HOME_DIR/.local/share/CLI-Inbox" ]; then
         log 8.05 "Instalando CLI-Inbox (Gestor de correo Gmail para terminal)..."

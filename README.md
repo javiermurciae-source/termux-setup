@@ -32,15 +32,25 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
   * `SecLists`: Diccionario masivo de auditoría y pentesting (~1GB).
 * 🌐 **Herramientas de red:** `nmap`, `whois`, `dnsutils`.
 
-### 📱 4. Suite Android SDK, Build-Tools & Reversing
-* 🛠️ **Android SDK Build-Tools:**
-  * `aapt` & `aapt2`: Compilador y empaquetador de recursos Android.
-  * `apksigner`: Firmador criptográfico de APKs (v1, v2, v3, v4).
-  * `dx` & `ecj`: Compilador Java Bytecode a Dalvik DEX (`.dex`).
-  * `adb` & `fastboot`: Herramientas de depuración y flasheo (`android-tools`).
-* 🔬 **Ingeniería Inversa:** `jadx` (descompilador Java) y `apktool`.
-* ☕ **Entorno Java:** OpenJDK 17 (`JAVA_HOME` preconfigurado) y `gradle`.
+### 📱 4. Suite Android SDK, Build-Tools & Mobile Dev (Expo / React Native)
+* 🛠️ **Android SDK & Build-Tools:** `aapt`, `aapt2`, `apksigner`, `dx`, `ecj`, `android-tools` (`adb`/`fastboot`).
+* 🚀 **Desarrollo Móvil Nativo con Expo & React Native:**
+  * `nodejs-lts`: Entorno JavaScript/TypeScript (incluye `npm` y `npx`).
+  * `eas-cli`: Herramienta CLI de Expo Application Services para compilar APKs en la nube (`eas build`).
+  * **Flujo de Trabajo:**
+    ```bash
+    # 1. Crear proyecto
+    npx create-expo-app mi-app --template
+    cd mi-app
 
+    # 2. Servidor de desarrollo en vivo (visualizar con Expo Go en Android)
+    npx expo start
+
+    # 3. Compilar APK instalable en la nube (sin quemar recursos locales)
+    eas login
+    EAS_NO_VCS=1 eas build --platform android --profile preview
+    ```
+* 🔬 **Ingeniería Inversa & Laboratorio:** `jadx` (descompilador Java), `apktool`, `openjdk-17`, `gradle`.
 * 📶 **Sniffers Wi-Fi/Red:** `tcpdump`, `tshark` (Wireshark CLI).
 
 ### 🎨 5. Estética, Shell & UI Restaurable

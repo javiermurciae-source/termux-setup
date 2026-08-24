@@ -332,7 +332,7 @@ Integra:
 - Text-to-Speech (TTS) nativo Android/Termux
 - Portapapeles dinámico (Clipboard)
 - Contexto vivo de scripts, logs, batería y entorno
-- Ejecución directa en OpenCode / Antigravity / AI
+- Ejecución directa en OpenCode vía `opencode --prompt` / `opencode run`
 """
 
 import subprocess
@@ -352,57 +352,35 @@ C_DIM = "\033[2;37m"
 C_RESET = "\033[0m"
 
 def speak(text):
-    """Habla la respuesta usando TTS de Android (vía termux-tts-speak o am start intent)"""
+    """Habla la respuesta usando TTS de Android"""
     if not text:
         return
     clean_text = text.replace('"', '').replace("'", "").replace('\n', ' ')[:300]
-    
-    # 1. Intentar termux-tts-speak
     try:
         subprocess.run(["termux-tts-speak", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
         return
     except Exception:
         pass
 
-    # 2. Fallback Root/Android Intent TTS
-    try:
-        cmd = f"am start -a android.intent.action.QUICK_VIEW -d 'text:{clean_text}'"
-        subprocess.run(["su", "-c", cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
-    except Exception:
-        pass
-
 def get_clipboard():
     """Obtiene el texto actual del portapapeles de Android"""
-    # 1. Intento por termux-clipboard-get
     try:
         res = subprocess.run(["termux-clipboard-get"], capture_output=True, text=True, timeout=2)
         if res.returncode == 0 and res.stdout.strip():
             return res.stdout.strip()
     except Exception:
         pass
-
-    # 2. Intento por Root service call clipboard
-    try:
-        res = subprocess.run(["su", "-c", "service call clipboard 2"], capture_output=True, text=True, timeout=2)
-        if res.returncode == 0 and res.stdout.strip():
-            return "Contenido recuperado de memoria"
-    except Exception:
-        pass
-
     return ""
 
 def get_system_context():
-    """Genera un contexto completo del entorno Termux y scripts"""
+    """Genera un contexto conciso del entorno Termux"""
     ctx = []
-    
-    # 1. Directorio y Scripts disponibles
     home = os.path.expanduser("~")
     scripts = []
     if os.path.exists(home):
         scripts = [f for f in os.listdir(home) if f.endswith(".sh") or f.endswith(".py")]
     ctx.append(f"📁 Scripts en Home: {', '.join(scripts[:10]) if scripts else 'Ninguno'}")
 
-    # 2. Cuentas de Correo configuradas
     mail_cfg = os.path.expanduser("~/.config/mail_accounts.json")
     if os.path.exists(mail_cfg):
         try:
@@ -412,7 +390,6 @@ def get_system_context():
         except Exception:
             pass
 
-    # 3. Estado del dispositivo
     try:
         bat = subprocess.run(["termux-battery-status"], capture_output=True, text=True, timeout=1)
         if bat.returncode == 0:
@@ -421,11 +398,10 @@ def get_system_context():
     except Exception:
         pass
 
-    # 4. Portapapeles
     clip = get_clipboard()
     if clip:
-        clip_preview = clip if len(clip) < 200 else clip[:200] + "..."
-        ctx.append(f"📋 Portapapeles Actual: {clip_preview}")
+        clip_preview = clip if len(clip) < 150 else clip[:150] + "..."
+        ctx.append(f"📋 Portapapeles: {clip_preview}")
 
     return "\n".join(ctx)
 
@@ -434,14 +410,13 @@ def main():
     print(f"{C_CYAN}│   🎙️  OPENCODE VOICE & CONTEXT AGENT (TERMUX AI)  ⚡   │{C_RESET}")
     print(f"{C_CYAN}╰────────────────────────────────────────────────────────╯{C_RESET}\n")
 
-    # Contexto recolectado
     context_str = get_system_context()
     print(f"{C_MAGENTA}🧠 Contexto del Sistema Detectado:{C_RESET}")
     for line in context_str.splitlines():
         print(f"  {C_DIM}• {line}{C_RESET}")
     print()
 
-    print(f"{C_YELLOW}🎤 Toca el icono de micrófono en tu teclado de Android para dictar,{C_RESET}")
+    print(f"{C_YELLOW}🎤 Toca el icono de micrófono en tu teclado para dictar,{C_RESET}")
     print(f"{C_YELLOW}   o escribe tu instrucción directamente:{C_RESET}\n")
 
     sys.stdout.write(f"{C_GREEN}🗣️  Tú: {C_RESET}")
@@ -452,33 +427,26 @@ def main():
         print(f"{C_RED}⚠️ No se ingresó ninguna instrucción.{C_RESET}")
         sys.exit(0)
 
-    # Si se pide incluir el portapapeles explícitamente
-    clip = get_clipboard()
-    full_prompt = f"[CONTEXTO DEL SISTEMA TERMUX]:\n{context_str}\n\n[INSTRUCCIÓN DEL USUARIO]:\n{user_prompt}"
+    full_prompt = f"[Contexto Termux: {context_str.replace(chr(10), ' | ')}]\n\nInstrucción: {user_prompt}"
 
-    print(f"\n{C_BLUE}🤖 Enviando a OpenCode con contexto vivo...{C_RESET}\n")
-    
-    # Hablar confirmación por voz
-    speak("Procesando tu instrucción con OpenCode")
+    print(f"\n{C_BLUE}🤖 Iniciando OpenCode con tu prompt y contexto...{C_RESET}\n")
+    speak("Iniciando OpenCode")
 
-    # Ejecutar opencode directamente con el prompt enriquecido
+    # Ejecución correcta con --prompt
     opencode_bin = "/data/data/com.termux/files/usr/bin/opencode"
     if os.path.exists(opencode_bin):
-        cmd = [opencode_bin, full_prompt]
+        cmd = [opencode_bin, "--prompt", full_prompt]
         try:
             subprocess.run(cmd)
         except Exception as e:
             print(f"{C_RED}❌ Error ejecutando OpenCode:{C_RESET} {e}")
     else:
-        # Fallback a Antigravity / AI
-        print(f"{C_YELLOW}💡 OpenCode no encontrado en ruta estándar, invocando AI interactiva...{C_RESET}")
-        os.system(f"opencode '{full_prompt}' 2>/dev/null || agy '{user_prompt}'")
+        os.system(f"opencode --prompt '{full_prompt}' 2>/dev/null || agy '{user_prompt}'")
 
 if __name__ == "__main__":
     main()
-
 VOICE_EOF
-    chmod +x "$HOME_DIR/opencode-voice.py"
+chmod +x "$HOME_DIR/opencode-voice.py"
     ln -sf "$HOME_DIR/opencode-voice.py" "$PREFIX/bin/openvoice"
     ln -sf "$HOME_DIR/opencode-voice.py" "$PREFIX/bin/ai-voice"
     ok "Agente OpenCode con Voz y Contexto vivo instalado (Comando: openvoice / ai-voice) 🎙️"

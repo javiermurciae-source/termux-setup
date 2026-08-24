@@ -41,7 +41,7 @@ step_scripts() {
 }
 
 # ── 2. Fastfetch ───────────────────────────────────────────
-step_fastfetch cmatrix() {
+step_fastfetch() {
     log 2 "Instalando config Fastfetch (config.jsonc + descargas.gif)..."
     mkdir -p "$HOME_DIR/.config/fastfetch cmatrix"
     for f in config.jsonc descargas.gif; do

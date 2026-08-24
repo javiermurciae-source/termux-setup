@@ -89,7 +89,7 @@ step_packages() {
     pkg install -y glibc proot 2>/dev/null
     
     # Herramientas generales + Root + ADB
-    pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix glow sl nsnake termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang alpine espeak aapt aapt2 apksigner dx ecj 2>/dev/null
+    pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix glow sl nsnake speedtest-cli termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang alpine espeak aapt aapt2 apksigner dx ecj 2>/dev/null
     
     ok "Paquetes instalados (incluyendo sudo/tsu y ADB)"
 }
@@ -182,6 +182,8 @@ alias netscan='netscan'
 alias lanscan='netscan'
 alias ssh-find='ssh-find'
 alias findpc='ssh-find'
+alias speed='speedtest-cli --simple'
+alias speedtest='speedtest-cli'
 alias transfile='transfile'
 alias pasar='transfile'
 alias searchsploit='searchsploit'

@@ -59,7 +59,9 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
 * 🔬 **Ingeniería Inversa & Laboratorio:** `jadx` (descompilador Java), `apktool`, `openjdk-17`, `gradle`.
 * 📶 **Sniffers Wi-Fi/Red:** `tcpdump`, `tshark` (Wireshark CLI).
 
-### 🎮 5. Modo Offline & Entretenimiento Retro
+### 🚀 5. Diagnóstico de Red & Entretenimiento
+* ⚡ **`speedtest` (o `speed`):** Medidor oficial de velocidad de Internet CLI para probar Ping, latencia, velocidad de bajada y subida en tiempo real.
+* 🕹️ **`tetris`:** Juego de Tetris clásico en colores y TUI para terminal con puntuaciones.
 * 🕹️ **`tetris`:** Juego de Tetris clásico en colores y TUI para terminal con puntuaciones.
 * 🐍 **`nsnake` (alias `snake`):** El juego de la serpiente retro clásica.
 * 🚂 **`sl` (alias `tren`):** Animación clásica de la locomotora de vapor cruzando tu pantalla.

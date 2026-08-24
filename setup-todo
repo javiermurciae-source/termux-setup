@@ -357,12 +357,12 @@ import getpass
 import sys
 import json
 import os
+import re
 
 CONFIG_FILE = os.path.expanduser("~/.config/mail_accounts.json")
 IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
 
-# Paleta de Colores ANSI Moderna
 C_CYAN = "\033[1;36m"
 C_BLUE = "\033[1;34m"
 C_GREEN = "\033[1;32m"
@@ -371,7 +371,14 @@ C_MAGENTA = "\033[1;35m"
 C_RED = "\033[1;31m"
 C_WHITE = "\033[1;37m"
 C_DIM = "\033[2;37m"
+C_UNDERLINE = "\033[4m"
 C_RESET = "\033[0m"
+
+C_URL = f"{C_CYAN}{C_UNDERLINE}"
+
+def highlight_urls(text):
+    url_pattern = r'(https?://[^\s<>"\']+)'
+    return re.sub(url_pattern, f"{C_URL}\\1{C_RESET}", text)
 
 def load_accounts():
     if os.path.exists(CONFIG_FILE):
@@ -420,7 +427,6 @@ print(f"{C_CYAN}╰────────────────────�
 
 accounts = load_accounts()
 
-# Si se pasa flag para añadir cuenta
 if "--add" in sys.argv or "-a" in sys.argv:
     selected_name = add_account(accounts)
 elif not accounts:
@@ -474,17 +480,14 @@ try:
             if isinstance(response_part, tuple):
                 msg = email.message_from_bytes(response_part[1])
                 
-                # Asunto
                 raw_subject = msg.get("Subject", "(Sin Asunto)")
                 subject, encoding = decode_header(raw_subject)[0]
                 if isinstance(subject, bytes):
                     subject = subject.decode(encoding if encoding else "utf-8", errors="ignore")
                 
-                # Remitente y Fecha
                 sender = msg.get("From", "(Desconocido)")
                 date_str = msg.get("Date", "")
 
-                # Cuerpo
                 body = ""
                 if msg.is_multipart():
                     for part in msg.walk():
@@ -507,7 +510,8 @@ try:
                     if payload:
                         body = payload.decode(errors="ignore")
 
-                # Tarjeta visual formateada
+                extracted_urls = re.findall(r'(https?://[^\s<>"\'\)]+)', body)
+
                 print(f"{C_CYAN}┌─────────────────────────────────────────────────────────────┐{C_RESET}")
                 print(f"{C_CYAN}│{C_RESET} {C_YELLOW}👤 De:{C_RESET}      {C_WHITE}{sender}{C_RESET}")
                 print(f"{C_CYAN}│{C_RESET} {C_BLUE}📅 Fecha:{C_RESET}   {C_DIM}{date_str}{C_RESET}")
@@ -515,11 +519,21 @@ try:
                 print(f"{C_CYAN}├─────────────────────────────────────────────────────────────┤{C_RESET}")
                 print(f"{C_CYAN}│{C_RESET} {C_MAGENTA}📄 Mensaje:{C_RESET}")
                 for line in body.strip().splitlines():
-                    print(f"{C_CYAN}│{C_RESET}   {line}")
+                    colored_line = highlight_urls(line)
+                    print(f"{C_CYAN}│{C_RESET}   {colored_line}")
+
+                if extracted_urls:
+                    print(f"{C_CYAN}├─────────────────────────────────────────────────────────────┤{C_RESET}")
+                    print(f"{C_CYAN}│{C_RESET} {C_YELLOW}🔗 Enlaces Detectados en este Correo:{C_RESET}")
+                    seen = set()
+                    unique_urls = [x for x in extracted_urls if not (x in seen or seen.add(x))]
+                    for u_idx, u in enumerate(unique_urls[:5], 1):
+                        print(f"{C_CYAN}│{C_RESET}   {C_YELLOW}[{u_idx}]{C_RESET} {C_CYAN}{C_UNDERLINE}{u}{C_RESET}")
+
                 print(f"{C_CYAN}└─────────────────────────────────────────────────────────────┘{C_RESET}\n")
 
     mail.logout()
-    print(f"{C_GREEN}✨ Sincronización completada. (Tip: usa 'readmail --add' para vincular otra cuenta){C_RESET}\n")
+    print(f"{C_GREEN}✨ Sincronización completada.{C_RESET}\n")
 
 except Exception as e:
     print(f"\n{C_RED}❌ Error:{C_RESET} {e}\n")

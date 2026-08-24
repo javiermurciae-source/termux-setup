@@ -1360,19 +1360,22 @@ open_url_android() {
 start_server() {
     show_header
     
-    # 1. Enlace simbólico de node si el binario empaquetado da Permission Denied
-    if [ -f "$PREFIX/bin/node" ]; then
-        ln -sf "$PREFIX/bin/node" "$PREFIX/lib/code-server/lib/node" 2>/dev/null || true
-    fi
-
-    # 2. Limpiar procesos anteriores
+    # 1. Limpiar procesos anteriores
     pkill -9 -f "code-server" 2>/dev/null || true
+    pkill -9 -f "entry.js" 2>/dev/null || true
 
     echo -e "${C_BLUE}⏳ Levantando VS Code Server con el motor Node nativo de Termux...${C_RESET}"
     
-    # Iniciar usando node nativo directamente sobre el punto de entrada de code-server
-    ENTRY_FILE="$PREFIX/lib/code-server/out/node/entry.js"
-    if [ -f "$ENTRY_FILE" ]; then
+    # Buscar el punto de entrada real de code-server
+    ENTRY_FILE=""
+    for path in "$PREFIX/lib/code-server/out/node/entry.js" "$PREFIX/lib/node_modules/code-server/out/node/entry.js"; do
+        if [ -f "$path" ]; then
+            ENTRY_FILE="$path"
+            break
+        fi
+    done
+
+    if [ -n "$ENTRY_FILE" ]; then
         nohup node "$ENTRY_FILE" --auth none --bind-addr 127.0.0.1:8080 --disable-telemetry --disable-update-check "$HOME" > "$LOG_FILE" 2>&1 &
     else
         nohup code-server --auth none --bind-addr 127.0.0.1:8080 --disable-telemetry --disable-update-check "$HOME" > "$LOG_FILE" 2>&1 &
@@ -1389,7 +1392,7 @@ start_server() {
     done
 
     if [ $SUCCESS -eq 1 ]; then
-        echo -e "${C_GREEN}✅ ¡VS Code Server está 100% LISTO Y RESPONDIENDO!${C_RESET}\n"
+        echo -e "\n${C_GREEN}✅ ¡VS Code Server está 100% LISTO Y FUNCIONANDO!${C_RESET}\n"
         echo -e "🌐 ${C_BOLD}Enlace Local:${C_RESET} ${C_CYAN}http://127.0.0.1:8080${C_RESET}"
         
         MY_IP=$(ip -o -4 addr show wlan0 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
@@ -1403,7 +1406,7 @@ start_server() {
         echo -e "${C_RED}❌ No se pudo confirmar el inicio de code-server.${C_RESET}"
         echo -e "${C_YELLOW}Mostrando las últimas líneas del log:${C_RESET}"
         tail -n 20 "$LOG_FILE"
-        echo -e "\n${C_WHITE}Puedes intentar acceder manualmente en:${C_RESET} ${C_CYAN}http://127.0.0.1:8080${C_RESET}"
+        echo -e "\n${C_WHITE}Abre manualmente este enlace en tu navegador:${C_RESET} ${C_CYAN}http://127.0.0.1:8080${C_RESET}\n"
     fi
 }
 

@@ -329,6 +329,7 @@ step_core_termux() {
 🎙️ OPENCODE VOICE & CONTEXT SUITE (Termux AI Agent)
 Generador de Contexto Real Maestro:
 - Arquitectura del sistema, hardware, OS y permisos Root/APatch
+- Catálogo completo con lujo de detalles de TODAS las APIs de Termux:API (Hardware, Sensores, SMS, Cámara, GPS, TTS, Diálogos, Linterna)
 - Catálogo vivo de herramientas CLI instaladas y cómo ejecutarlas
 - Scripts locales en Home con descripción de su función
 - Cuentas IMAP configuradas y estado de red/batería
@@ -371,31 +372,64 @@ def get_clipboard():
     return ""
 
 def build_full_system_context():
-    """Construye un dossier de contexto profundo de todo el entorno Termux"""
+    """Construye un dossier de contexto profundo de todo el entorno Termux con detalle de Termux:API"""
     ctx = []
     ctx.append("=================== ENTORNO DEL DISPOSITIVO Y SISTEMA ===================")
     ctx.append("• Dispositivo: Android / Infinix X6878 (ARM64-v8a)")
-    ctx.append("• Entorno Shell: Termux + Fish Shell (Launcher nativo)")
+    ctx.append("• Entorno Shell: Termux + Fish Shell (PickleHik3 Termux Launcher)")
     
     # 1. Permisos Root
     has_root = os.path.exists("/system/bin/su") or os.path.exists("/data/data/com.termux/files/usr/bin/tsu")
     ctx.append(f"• Acceso Superusuario (Root): {'SI (APatch/Magisk disponible vía `su` / `tsu`)' if has_root else 'NO'}")
 
-    # 2. Batería
+    # 2. Batería en vivo
     try:
         bat = subprocess.run(["termux-battery-status"], capture_output=True, text=True, timeout=1)
         if bat.returncode == 0:
             b = json.loads(bat.stdout)
-            ctx.append(f"• Batería: {b.get('percentage')}% ({b.get('status')}, Temp: {b.get('temperature', 0)/10}°C)")
+            ctx.append(f"• Batería en Vivo: {b.get('percentage')}% ({b.get('status')}, Temp: {b.get('temperature', 0)/10}°C)")
     except Exception:
         pass
 
-    ctx.append("\n=================== HERRAMIENTAS Y SCRIPTS DISPONIBLES ===================")
+    ctx.append("\n=================== CATÁLOGO DE COMANDOS TERMUX:API DISPONIBLES ===================")
+    ctx.append("Puedes usar y llamar a estas herramientas de Android directamente desde la terminal:")
+    ctx.append("• 📋 Portapapeles:")
+    ctx.append("    - `termux-clipboard-get`: Lee el portapapeles de Android.")
+    ctx.append("    - `termux-clipboard-set <texto>`: Escribe texto en el portapapeles.")
+    ctx.append("• 🔋 Hardware, Sensores & Linterna:")
+    ctx.append("    - `termux-battery-status`: Obtiene porcentaje, salud, voltaje y estado de carga.")
+    ctx.append("    - `termux-sensor -s` / `termux-sensor -n <sensor>`: Lee datos de sensores en tiempo real.")
+    ctx.append("    - `termux-torch on` / `termux-torch off`: Enciende o apaga la linterna física.")
+    ctx.append("    - `termux-vibrate -d <ms>`: Hace vibrar el teléfono por X milisegundos (ej: `-d 500`).")
+    ctx.append("• 📷 Cámara:")
+    ctx.append("    - `termux-camera-info`: Lista las cámaras frontal/trasera.")
+    ctx.append("    - `termux-camera-photo <ruta.jpg>`: Toma una fotografía con la cámara.")
+    ctx.append("• 📍 Ubicación:")
+    ctx.append("    - `termux-location`: Obtiene las coordenadas GPS exactas (latitud, longitud, altitud).")
+    ctx.append("• 🔔 Notificaciones & Diálogos:")
+    ctx.append("    - `termux-notification -t 'Título' -c 'Contenido'`: Muestra una notificación en la barra de Android.")
+    ctx.append("    - `termux-notification-remove <id>`: Elimina una notificación por su ID.")
+    ctx.append("    - `termux-toast <texto>`: Muestra un mensaje emergente Toast en la pantalla.")
+    ctx.append("    - `termux-dialog [confirm|text|radio|sheet|speech]`: Abre ventanas de diálogo nativas de Android.")
+    ctx.append("    - `termux-storage-get <archivo>`: Solicita al usuario un archivo con el selector nativo.")
+    ctx.append("• 📶 Conectividad & Red:")
+    ctx.append("    - `termux-wifi-connectioninfo`: Muestra SSID, IP, BSSID y velocidad de enlace Wi-Fi.")
+    ctx.append("    - `termux-wifi-scaninfo`: Escanea las redes Wi-Fi cercanas.")
+    ctx.append("• 📞 Telefonía & SMS:")
+    ctx.append("    - `termux-telephony-deviceinfo`: Información IMEI, SIM y operador.")
+    ctx.append("    - `termux-telephony-cellinfo`: Información de antenas celulares.")
+    ctx.append("    - `termux-sms-inbox`: Lista los mensajes SMS recibidos.")
+    ctx.append("    - `termux-sms-send -n <numero> <mensaje>`: Envía un SMS.")
+    ctx.append("• 🗣️ Audio & TTS:")
+    ctx.append("    - `termux-tts-speak <texto>`: Sintetiza y habla texto en voz alta por el altavoz.")
+    ctx.append("    - `termux-media-scan <archivo>`: Notifica al sistema para escanear multimedia.")
+
+    ctx.append("\n=================== SCRIPTS Y UTILIDADES LOCALES ===================")
     
     # 3. Scripts en Home y su función
     home = os.path.expanduser("~")
     script_descriptions = {
-        "readmail": "Lector IMAP de correos Gmail/Dominio interactivo con tarjetas ANSI (alias `mail` / `leer-correo.sh`)",
+        "readmail": "Lector IMAP interactivo de correos Gmail/Dominio con tarjetas ANSI (alias `mail` / `leer-correo.sh`)",
         "verificar-cod.sh": "Extractor automatizado de códigos de verificación y OTP por IMAP (alias `codc`)",
         "setup-todo": "Script maestro de aprovisionamiento, restauración y configuración del entorno",
         "fzf_clipboard_scratchpad.sh": "Gestor flotante de portapapeles FZF y notas rápidas",
@@ -466,8 +500,8 @@ def main():
 
     # Prompt Maestro Estructurado
     master_prompt = f"""[ROL Y ENTORNO DEL AGENTE]:
-Eres un asistente de ingeniería y automatización experto ejecutándose en un entorno Termux real en Android.
-A continuación tienes el estado real del sistema, herramientas y scripts disponibles:
+Eres un asistente de ingeniería y automatización experto ejecutándote en un entorno Termux real en Android (Infinix ARM64).
+Tienes a tu disposición el hardware del teléfono a través de Termux:API, acceso Root (su/tsu), scripts locales y suite de pentesting/desarrollo.
 
 {full_context}
 
@@ -475,9 +509,11 @@ A continuación tienes el estado real del sistema, herramientas y scripts dispon
 {user_prompt}
 
 [INSTRUCCIONES DE RESPUESTA]:
-Usa las herramientas CLI, scripts y contexto proporcionados para responder de forma concisa, precisa y accionable."""
+1. Si el usuario te pide interactuar con el hardware (linterna, vibración, batería, portapapeles, SMS, notificaciones, cámara, ubicación), usa o genera los comandos exactos de `termux-*` listados arriba.
+2. Si el usuario te pide consultar correos o cuentas, usa el contexto de `readmail` e IMAP.
+3. Responde de forma concisa, técnica, precisa y accionable en Markdown."""
 
-    print(f"\n{C_BLUE}🤖 Transfiriendo instrucción y contexto a OpenCode...{C_RESET}\n")
+    print(f"\n{C_BLUE}🤖 Transfiriendo instrucción y contexto maestro a OpenCode...{C_RESET}\n")
     speak("Analizando con OpenCode")
 
     opencode_bin = "/data/data/com.termux/files/usr/bin/opencode"

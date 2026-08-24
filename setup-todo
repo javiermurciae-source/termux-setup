@@ -415,13 +415,12 @@ try:
                     if payload:
                         body = payload.decode(errors="ignore")
 
-                # Extraer posibles códigos (4 a 8 dígitos)
-                codes = re.findall(r'\b\d{4,8}\b', body)
-                otp = codes[0] if codes else "No detectado"
-
                 print(f"🔸 De: {sender}")
                 print(f"🔹 Asunto: {subject}")
-                print(f"🔑 CÓDIGO EXTRAÍDO: [1;32m{otp}[0m")
+                
+                # Vista previa limpia del cuerpo
+                preview = "\n".join([line.strip() for line in body.splitlines() if line.strip()][:4])
+                print(f"📄 Contenido:\n{preview}")
                 print("-" * 50)
 
     mail.logout()

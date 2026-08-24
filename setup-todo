@@ -166,8 +166,6 @@ alias fix-media='fix-media'
 
 # Root & ADB
 alias s='sudo'
-alias openvoice='openvoice'
-alias aivoice='openvoice'
 alias adbs='adb shell'
 alias adbd='adb devices'
 alias mail='inbox'
@@ -309,6 +307,18 @@ tree.write(prefs, encoding="utf-8", xml_declaration=True)
 
 step_core_termux() {
     log 7 "Verificando Core-Termux y Agentes de IA..."
+    
+    if [ -x "$PREFIX/bin/core" ]; then
+        ok "Core-Termux ya está instalado. ¡Omitiendo reinstalación! ⚡"
+    else
+        warn "Instalando motor Core-Termux..."
+        curl -fSLO https://raw.githubusercontent.com/DevCoreXOfficial/core-termux/main/install.sh
+        # Hack para forzar que el instalador de core-termux muestre TODOS los errores
+        sed -i 's|&>/dev/null||g' install.sh
+        sed -i 's|>/dev/null 2>&1||g' install.sh
+        bash install.sh || warn "Advertencia: El instalador de Core-Termux arrojó un error."
+        rm -f install.sh
+    fi
     
     if [ -x "$PREFIX/bin/core" ]; then
         ok "Core-Termux ya está instalado. ¡Omitiendo reinstalación! ⚡"

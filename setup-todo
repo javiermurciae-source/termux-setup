@@ -1330,6 +1330,7 @@ TRANS_EOF
 
 CONFIG_DIR="$HOME/.config/code-server"
 CONFIG_FILE="$CONFIG_DIR/config.yaml"
+LOG_FILE="$HOME/.code-server.log"
 
 C_CYAN="\033[1;36m"
 C_BLUE="\033[1;34m"
@@ -1343,16 +1344,6 @@ C_RESET="\033[0m"
 
 mkdir -p "$CONFIG_DIR"
 
-# Configuración por defecto: sin contraseña para acceso local ultra-rápido o con contraseña segura
-if [ ! -f "$CONFIG_FILE" ]; then
-cat << 'EOF' > "$CONFIG_FILE"
-bind-addr: 127.0.0.1:8080
-auth: none
-cert: false
-disable-telemetry: true
-EOF
-fi
-
 show_header() {
     echo -e "${C_CYAN}╭──────────────────────────────────────────────────────────────╮${C_RESET}"
     echo -e "${C_CYAN}│     💻  VISUAL STUDIO CODE SERVER (EN TU NAVEGADOR) ⚡       │${C_RESET}"
@@ -1361,35 +1352,60 @@ show_header() {
 
 start_server() {
     show_header
-    if pgrep -f "code-server" > /dev/null; then
-        echo -e "${C_YELLOW}⚠️  VS Code Server ya está corriendo en segundo plano.${C_RESET}"
-    else
-        echo -e "${C_BLUE}⏳ Iniciando VS Code Server en http://127.0.0.1:8080...${C_RESET}"
-        nohup code-server --auth none --bind-addr 0.0.0.0:8080 > "$HOME/.code-server.log" 2>&1 &
-        sleep 2
-        echo -e "${C_GREEN}✅ ¡VS Code Server iniciado exitosamente!${C_RESET}"
+    
+    # 1. Comprobar si code-server está instalado
+    if ! command -v code-server >/dev/null 2>&1; then
+        echo -e "${C_YELLOW}📦 code-server no está instalado. Instalando mediante TUR...${C_RESET}"
+        pkg install -y tur-repo >/dev/null 2>&1
+        pkg install -y code-server
     fi
 
-    echo -e "\n${C_GREEN}🌐 Acceso Local:${C_RESET} ${C_BOLD}${C_CYAN}http://127.0.0.1:8080${C_RESET}"
+    # 2. Matar instancias colgadas previas si no responden
+    if pgrep -f "code-server" > /dev/null; then
+        echo -e "${C_GREEN}🟢 VS Code Server ya está en ejecución.${C_RESET}"
+    else
+        echo -e "${C_BLUE}⏳ Iniciando VS Code Server en primer plano/servicio...${C_RESET}"
+        
+        # Iniciar code-server con flags explícitos para no colgarse
+        code-server --auth none --bind-addr 127.0.0.1:8080 --disable-telemetry --disable-update-check > "$LOG_FILE" 2>&1 &
+        
+        # Esperar hasta 5 segundos a que el puerto 8080 esté escuchando
+        COUNT=0
+        while ! (netstat -tuln 2>/dev/null | grep -q ":8080" || ss -tuln 2>/dev/null | grep -q ":8080" || lsof -i :8080 2>/dev/null | grep -q "LISTEN"); do
+            sleep 1
+            COUNT=$((COUNT + 1))
+            if [ $COUNT -ge 6 ]; then
+                break
+            fi
+        done
+        
+        if pgrep -f "code-server" > /dev/null; then
+            echo -e "${C_GREEN}✅ ¡VS Code Server iniciado exitosamente!${C_RESET}"
+        else
+            echo -e "${C_RED}❌ Error al iniciar code-server. Mostrando log:${C_RESET}"
+            tail -n 15 "$LOG_FILE"
+            exit 1
+        fi
+    fi
+
+    echo -e "\n${C_GREEN}🌐 Acceso Local en tu navegador:${C_RESET} ${C_BOLD}${C_CYAN}http://127.0.0.1:8080${C_RESET}"
     
-    # Obtener IP local Wi-Fi para acceder desde tu PC/Tablet
+    # IP para tablet o PC
     MY_IP=$(ip -o -4 addr show wlan0 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
     if [ -n "$MY_IP" ]; then
-        echo -e "${C_MAGENTA}📱 Acceso desde tu PC / Tablet en la misma red Wi-Fi:${C_RESET} ${C_BOLD}${C_YELLOW}http://$MY_IP:8080${C_RESET}"
+        echo -e "${C_MAGENTA}📱 Acceso desde PC/Tablet (Misma red Wi-Fi):${C_RESET} ${C_BOLD}${C_YELLOW}http://$MY_IP:8080${C_RESET}"
     fi
 
-    echo -e "\n${C_WHITE}¿Deseas abrir VS Code en tu navegador de Android ahora? [S/n]:${C_RESET} "
-    read -r OPEN_BROWSER
-    if [[ "$OPEN_BROWSER" =~ ^[SsYy]?$ ]]; then
-        termux-open-url "http://127.0.0.1:8080" 2>/dev/null || am start -a android.intent.action.VIEW -d "http://127.0.0.1:8080" 2>/dev/null || true
-    fi
+    echo -e "\n${C_WHITE}Abriendo VS Code en tu navegador de Android...${C_RESET}"
+    termux-open-url "http://127.0.0.1:8080" 2>/dev/null || am start -a android.intent.action.VIEW -d "http://127.0.0.1:8080" 2>/dev/null || true
 }
 
 stop_server() {
     show_header
     echo -e "${C_RED}🛑 Deteniendo VS Code Server...${C_RESET}"
     pkill -9 -f "code-server" 2>/dev/null || true
-    echo -e "${C_GREEN}✅ Servidor detenido.${C_RESET}\n"
+    pkill -9 -f "node.*code-server" 2>/dev/null || true
+    echo -e "${C_GREEN}✅ Servidor detenido y memoria liberada.${C_RESET}\n"
 }
 
 status_server() {
@@ -1416,6 +1432,10 @@ case "$1" in
         stop_server
         sleep 1
         start_server
+        ;;
+    logs|log)
+        show_header
+        tail -n 30 "$LOG_FILE"
         ;;
     *)
         start_server

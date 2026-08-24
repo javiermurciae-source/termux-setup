@@ -328,9 +328,10 @@ step_core_termux() {
 """
 🎙️ OPENCODE VOICE & CONTEXT SUITE (Termux AI Agent)
 - Entrada por Voz (Micrófono Teclado)
-- Salida por Voz Hablada en Español (espeak nativo + termux-tts-speak)
-- Copia directa al Portapapeles del Prompt Maestro
-- Apertura 100% Nativa de la Interfaz TUI de OpenCode
+- Salida por Voz Hablada con Termux:API TTS Nativo de Android (Google TTS / Voz del Sistema)
+- Ejecución en vivo de OpenCode con streaming y locución al terminar
+- Control total de Hardware vía Termux:API
+- Contexto vivo del sistema y scripts locales
 """
 
 import subprocess
@@ -350,30 +351,50 @@ C_WHITE = "\033[1;37m"
 C_DIM = "\033[2;37m"
 C_RESET = "\033[0m"
 
-def clean_markdown_for_speech(text):
+def clean_for_tts(text):
+    """Limpia markdown, código y símbolos raros para una locución fluida de Google TTS"""
     if not text:
         return ""
-    text = re.sub(r'```[\s\S]*?```', 'He generado el código en pantalla.', text)
+    # Quitar bloques de código completos
+    text = re.sub(r'```[\s\S]*?```', 'He generado el bloque de código en la pantalla.', text)
+    # Quitar links http
     text = re.sub(r'https?://\S+', 'un enlace web', text)
-    text = re.sub(r'[#*_`~>|┌┐└┘├┤│─]', '', text)
+    # Quitar caracteres especiales de markdown y cuadros ANSI
+    text = re.sub(r'[#*_`~>|┌┐└┘├┤│─╭╮╰╯═]', '', text)
+    # Reducir espacios
     text = ' '.join(text.split())
-    if len(text) > 350:
-        text = text[:350] + "... y los demás detalles están en pantalla."
+    # Limitar longitud para lectura de voz óptima (primeros 400 caracteres)
+    if len(text) > 400:
+        text = text[:400] + "... y los demás detalles están en tu pantalla."
     return text
 
-def speak(text):
+def speak_termux_api(text):
+    """Habla usando Termux:API TTS con la voz de Android / Google TTS"""
     if not text:
         return
-    clean_text = clean_markdown_for_speech(text)
+    clean_text = clean_for_tts(text)
     if not clean_text:
         return
+    
+    # 1. Ejecutar broadcast directo al receiver de Termux:API (Garantiza ejecución inmediata sin cuelgues)
     try:
-        subprocess.Popen(["espeak", "-v", "es", "-s", "160", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        escaped_text = clean_text.replace('"', '\\"').replace("'", "")
+        cmd = f'am broadcast --user 0 -a com.termux.api.action.TTS_SPEAK -n com.termux.api/.TermuxApiReceiver --es text "{escaped_text}"'
+        subprocess.run(["su", "-c", cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
         return
     except Exception:
         pass
+
+    # 2. Intentar termux-tts-speak estándar
     try:
-        subprocess.Popen(["termux-tts-speak", "-l", "es", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        p = subprocess.Popen(["termux-tts-speak", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return
+    except Exception:
+        pass
+
+    # 3. Fallback espeak
+    try:
+        subprocess.Popen(["espeak", "-v", "es", "-s", "160", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
 
@@ -419,7 +440,7 @@ def build_full_system_context():
     ctx.append("• 🔔 Notificaciones: `termux-notification -t 'T' -c 'C'`, `termux-toast <texto>`, `termux-dialog confirm`")
     ctx.append("• 📶 Conectividad: `termux-wifi-connectioninfo`, `termux-wifi-scaninfo`")
     ctx.append("• 📞 Telefonía: `termux-telephony-deviceinfo`, `termux-sms-inbox`, `termux-sms-send -n <num> <msg>`")
-    ctx.append("• 🗣️ Audio & Voz: `termux-tts-speak <texto>` o `espeak -v es <texto>`")
+    ctx.append("• 🗣️ Audio & Voz: `termux-tts-speak <texto>` (Google TTS Android)")
 
     ctx.append("\n=================== SCRIPTS Y UTILIDADES LOCALES ===================")
     home = os.path.expanduser("~")
@@ -501,15 +522,35 @@ Tienes a tu disposición el hardware del teléfono a través de Termux:API, acce
 2. Si el usuario te pide consultar correos o cuentas, usa el contexto de `readmail` e IMAP.
 3. Responde de forma concisa, técnica, precisa y accionable en Markdown."""
 
-    # Copiar el prompt enriquecido al portapapeles
     set_clipboard(master_prompt)
 
-    print(f"\n{C_GREEN}📋 Prompt y contexto copiados al portapapeles.{C_RESET}")
-    print(f"{C_BLUE}🚀 Abriendo interfaz interactiva de OpenCode (TUI)...{C_RESET}\n")
-    speak("Abriendo interfaz de OpenCode")
+    print(f"\n{C_BLUE}🤖 Procesando con OpenCode en vivo y locución por Termux:API TTS...{C_RESET}\n")
+    speak_termux_api("Procesando tu solicitud con OpenCode")
 
-    # Iniciar opencode en modo interactivo en primer plano directamente
-    os.system(f"opencode --prompt '{master_prompt}'")
+    opencode_bin = "/data/data/com.termux/files/usr/bin/opencode"
+    full_response = ""
+
+    if os.path.exists(opencode_bin):
+        cmd = [opencode_bin, "run", master_prompt]
+        try:
+            # Ejecutar con streaming visual en tiempo real en la terminal
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            response_chunks = []
+            for line in proc.stdout:
+                sys.stdout.write(line)
+                sys.stdout.flush()
+                response_chunks.append(line)
+            proc.wait()
+            full_response = "".join(response_chunks)
+        except Exception as e:
+            print(f"{C_RED}❌ Error ejecutando OpenCode:{C_RESET} {e}")
+    else:
+        os.system(f"opencode run '{master_prompt}' 2>/dev/null || agy '{user_prompt}'")
+
+    # ¡HABLARRRRR LA RESPUESTA EN VOZ ALTA CON TERMUX:API!
+    if full_response.strip():
+        print(f"\n{C_GREEN}🗣️ Hablando respuesta con la voz de Android (Termux:API)...{C_RESET}\n")
+        speak_termux_api(full_response)
 
 if __name__ == "__main__":
     main()

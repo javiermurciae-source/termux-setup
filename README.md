@@ -1,19 +1,81 @@
-# 🚀 Termux Setup & Launcher Customization
+# 🚀 Termux Ultimate Setup & Launcher Customization 📱⚡
 
-Configuración y restauración completa de entorno para **Termux Launcher**.
+Script de restauración y aprovisionamiento maestro completamente automatizado, modular e idempotente para **Termux** y **Termux Launcher**.
 
-## 📦 Contenido
-- **Scripts:** Horario interactivo, selector de GIF, verificador de código, portapapeles FZF flotante.
-- **Fastfetch:** Configuración y animación personalizada GIF (`descargas.gif`).
-- **Termux Config:** Personalización de `.termux` (extra keys, bindings, colores, fuentes).
-- **Showcase:** Fish shell, Oh My Posh, Neovim (AstroNvim), eza, zoxide, fastfetch.
-- **Core-Termux:** Modular Dev Environment para Termux.
+---
 
-## ⚡ Instalación
-En Termux, ejecuta:
+## 🌟 Características Principales
+
+### 🧠 1. Flota de Asistentes de IA (Nativos Glibc)
+Integración completa con **Core-Termux** instalando y compilando asistentes de desarrollo por IA de forma nativa:
+* 🤖 `opencode`
+* ⚡ `kilo` (KiloCode CLI)
+* 🛡️ `freebuff`
+* 🚀 `agy` (Antigravity CLI)
+* ⚓ `keelcode`
+* 💻 `supercode`
+* 📱 `mimo` (MiMoCode)
+* 📜 `codex` (Codex CLI)
+* 🧠 `qwen` (Qwen Code)
+* 🛠️ `cline` (Cline CLI)
+
+### 📬 2. Suite de Correo Terminal
+* ⚡ **`readmail` (o `mail`):** Lector IMAP interactivo en Python con soporte para **múltiples cuentas de Gmail**, diseño de tarjetas visuales con bordes ANSI, emojis y extracción completa de mensajes.
+* 🔑 **`codc` / `verificar-cod.sh`:** Extractor automatizado de códigos 2FA/OTP por IMAP.
+* 📦 **`inbox` (CLI-Inbox):** Cliente completo de Gmail para terminal basado en Rich y Prompt Toolkit.
+
+### 🕵️ 3. Reconocimiento Web, Fuzzing & Scraping
+* 🔍 **WhatWeb:** Escáner avanzado de tecnologías y huellas de servidores web.
+* 🕸️ **Web Scraping:** Python `requests`, `beautifulsoup4` y `html2text`.
+* 💣 **Fuzzing (Opcional interactivo):**
+  * `ffuf`: Fuzzer web compilado directamente en Go.
+  * `SecLists`: Diccionario masivo de auditoría y pentesting (~1GB).
+* 🌐 **Herramientas de red:** `nmap`, `whois`, `dnsutils`.
+
+### 🔬 4. Laboratorio Avanzado & Reversing Android
+* 📶 **Sniffers Wi-Fi/Red:** `tcpdump`, `tshark` (Wireshark CLI).
+* ☕ **Desarrollo:** OpenJDK 17 (`JAVA_HOME` preconfigurado) y compilador `gradle`.
+* 🧩 **Ingeniería Inversa:** `jadx` y `apktool` (mediante repositorios TUR oficiales).
+
+### 🎨 5. Estética, Shell & UI Restaurable
+* 🐟 **Shell:** `fish` con Oh My Posh, Fastfetch y temas personalizados.
+* 🎛️ **UI & Teclado:** Restauración de teclas extras con NerdFonts (`󰥻`, `󰯌`, ``, `󱎸`, ``, `󱞂`), márgenes y proporciones milimétricas.
+* 📱 **Pinned Apps:** Respaldador y restaurador de las 12 aplicaciones ancladas del Launcher (WhatsApp, Brave, ChatGPT, Nequi, APatch, etc.).
+* 📋 **Scripts de Utilidad:** `horario`, `gif-selector`, `portapapeles.sh` (con `fzf`).
+
+---
+
+## ⚡ Instalación Rápida (One-Liner)
+
+En una instalación limpia de Termux, copia y pega este comando:
+
 ```bash
-git clone https://github.com/javiermurciae-source/termux-setup.git ~/termux-setup
-cd ~/termux-setup
-chmod +x setup-todo setup-launcher
-./setup-todo
+termux-setup-storage && pkg update -y && pkg install -y git && git clone https://github.com/javiermurciae-source/termux-setup.git ~/termux-setup && bash ~/termux-setup/setup-todo
 ```
+
+---
+
+## 🔄 Sincronización de Actualizaciones
+
+Una vez instalado, el alias maestro queda registrado permanentemente en Fish. Para actualizar cambios desde GitHub, solo ejecuta:
+
+```bash
+sync-setup
+```
+
+---
+
+## 📁 Estructura del Repositorio
+
+```text
+termux-setup/
+├── setup-todo              # Script maestro de aprovisionamiento
+├── README.md               # Documentación completa
+├── fastfetch/              # Configuraciones de fastfetch y assets
+├── termux_config/          # Configuración base de termux.properties
+├── portapapeles/           # Utilidad flotante de portapapeles FZF
+└── scripts/                # Scripts utilitarios auxiliares
+```
+
+---
+*Desarrollado y optimizado para Infinix & arquitecturas ARM64 con soporte Root/Apatch.* 🚀

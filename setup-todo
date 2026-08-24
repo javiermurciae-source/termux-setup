@@ -327,10 +327,13 @@ step_core_termux() {
 #!/data/data/com.termux/files/usr/bin/python3
 """
 🎙️ OPENCODE VOICE & CONTEXT SUITE (Termux AI Agent)
-Soporta:
-- OpenCode / Antigravity / KiloCode / Qwen
-- Selección automática de proveedor/modelo AI
-- Dictado por voz, TTS, Clipboard y Contexto del sistema
+Generador de Contexto Real Maestro:
+- Arquitectura del sistema, hardware, OS y permisos Root/APatch
+- Catálogo vivo de herramientas CLI instaladas y cómo ejecutarlas
+- Scripts locales en Home con descripción de su función
+- Cuentas IMAP configuradas y estado de red/batería
+- Contenido del portapapeles
+- Inyección de System Prompt Maestro para OpenCode
 """
 
 import subprocess
@@ -350,18 +353,15 @@ C_DIM = "\033[2;37m"
 C_RESET = "\033[0m"
 
 def speak(text):
-    """Habla la respuesta usando TTS de Android"""
     if not text:
         return
     clean_text = text.replace('"', '').replace("'", "").replace('\n', ' ')[:300]
     try:
         subprocess.run(["termux-tts-speak", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
-        return
     except Exception:
         pass
 
 def get_clipboard():
-    """Obtiene el texto actual del portapapeles de Android"""
     try:
         res = subprocess.run(["termux-clipboard-get"], capture_output=True, text=True, timeout=2)
         if res.returncode == 0 and res.stdout.strip():
@@ -370,36 +370,73 @@ def get_clipboard():
         pass
     return ""
 
-def get_system_context():
-    """Genera un contexto conciso del entorno Termux"""
+def build_full_system_context():
+    """Construye un dossier de contexto profundo de todo el entorno Termux"""
     ctx = []
-    home = os.path.expanduser("~")
-    scripts = []
-    if os.path.exists(home):
-        scripts = [f for f in os.listdir(home) if f.endswith(".sh") or f.endswith(".py")]
-    ctx.append(f"📁 Scripts en Home: {', '.join(scripts[:10]) if scripts else 'Ninguno'}")
+    ctx.append("=================== ENTORNO DEL DISPOSITIVO Y SISTEMA ===================")
+    ctx.append("• Dispositivo: Android / Infinix X6878 (ARM64-v8a)")
+    ctx.append("• Entorno Shell: Termux + Fish Shell (Launcher nativo)")
+    
+    # 1. Permisos Root
+    has_root = os.path.exists("/system/bin/su") or os.path.exists("/data/data/com.termux/files/usr/bin/tsu")
+    ctx.append(f"• Acceso Superusuario (Root): {'SI (APatch/Magisk disponible vía `su` / `tsu`)' if has_root else 'NO'}")
 
+    # 2. Batería
+    try:
+        bat = subprocess.run(["termux-battery-status"], capture_output=True, text=True, timeout=1)
+        if bat.returncode == 0:
+            b = json.loads(bat.stdout)
+            ctx.append(f"• Batería: {b.get('percentage')}% ({b.get('status')}, Temp: {b.get('temperature', 0)/10}°C)")
+    except Exception:
+        pass
+
+    ctx.append("\n=================== HERRAMIENTAS Y SCRIPTS DISPONIBLES ===================")
+    
+    # 3. Scripts en Home y su función
+    home = os.path.expanduser("~")
+    script_descriptions = {
+        "readmail": "Lector IMAP de correos Gmail/Dominio interactivo con tarjetas ANSI (alias `mail` / `leer-correo.sh`)",
+        "verificar-cod.sh": "Extractor automatizado de códigos de verificación y OTP por IMAP (alias `codc`)",
+        "setup-todo": "Script maestro de aprovisionamiento, restauración y configuración del entorno",
+        "fzf_clipboard_scratchpad.sh": "Gestor flotante de portapapeles FZF y notas rápidas",
+        "horario.sh": "Gestor de horarios e itinerarios interactivo",
+        "gif-selector.sh": "Selector y reproductor de animaciones GIF en terminal",
+        "opencode-voice.py": "Suite de dictado por voz y contexto vivo para el agente IA"
+    }
+
+    if os.path.exists(home):
+        found_scripts = []
+        for f in os.listdir(home):
+            if f in script_descriptions:
+                found_scripts.append(f"  - `{f}`: {script_descriptions[f]}")
+            elif f.endswith(".sh") or f.endswith(".py"):
+                found_scripts.append(f"  - `{f}`: Script de usuario en Python/Bash")
+        ctx.append("📁 Scripts en el directorio Home (~/):")
+        ctx.extend(found_scripts if found_scripts else ["  - Ninguno"])
+
+    # 4. Cuentas de Correo
     mail_cfg = os.path.expanduser("~/.config/mail_accounts.json")
     if os.path.exists(mail_cfg):
         try:
             with open(mail_cfg) as f:
-                accs = list(json.load(f).keys())
-                ctx.append(f"📬 Cuentas de Correo: {', '.join(accs)}")
+                accs = json.load(f)
+                acc_summary = [f"{name} ({data.get('email')})" for name, data in accs.items()]
+                ctx.append(f"\n📬 Cuentas de Correo Configuradas en IMAP: {', '.join(acc_summary) if acc_summary else 'Ninguna'}")
         except Exception:
             pass
 
-    try:
-        bat = subprocess.run(["termux-battery-status"], capture_output=True, text=True, timeout=1)
-        if bat.returncode == 0:
-            b_data = json.loads(bat.stdout)
-            ctx.append(f"🔋 Batería: {b_data.get('percentage')}% ({b_data.get('status')})")
-    except Exception:
-        pass
+    # 5. Suite de Pentesting, Red y Reversing instalada
+    ctx.append("\n🛠️ Herramientas CLI del Ecosistema:")
+    ctx.append("  - Red & Sniffing: `nmap`, `tcpdump`, `tshark` (Wireshark CLI), `whois`, `dnsutils`")
+    ctx.append("  - Fuzzing & Web: `ffuf` (Go), `SecLists` (~/wordlists/SecLists), `whatweb`, `curl`")
+    ctx.append("  - Reversing Android & Java: `jadx` (descompilador APK), `apktool`, `openjdk-17`, `gradle`")
+    ctx.append("  - Utilidades Terminal: `fzf`, `yazi` (explorador de archivos), `eza`, `fastfetch`, `cowsay`, `nyancat`")
+    ctx.append("  - Agentes IA CLI: `opencode`, `agy` (Antigravity), `kilo` (KiloCode), `keelcode`, `qwen`, `cline`")
 
+    # 6. Portapapeles
     clip = get_clipboard()
     if clip:
-        clip_preview = clip if len(clip) < 150 else clip[:150] + "..."
-        ctx.append(f"📋 Portapapeles: {clip_preview}")
+        ctx.append(f"\n📋 Contenido Actual del Portapapeles (Android Clipboard):\n\"\"\"\n{clip}\n\"\"\"")
 
     return "\n".join(ctx)
 
@@ -408,20 +445,17 @@ def main():
     print(f"{C_CYAN}│   🎙️  OPENCODE VOICE & CONTEXT AGENT (TERMUX AI)  ⚡   │{C_RESET}")
     print(f"{C_CYAN}╰────────────────────────────────────────────────────────╯{C_RESET}\n")
 
-    context_str = get_system_context()
-    print(f"{C_MAGENTA}🧠 Contexto del Sistema Detectado:{C_RESET}")
-    for line in context_str.splitlines():
-        print(f"  {C_DIM}• {line}{C_RESET}")
-    print()
-
-    # Si se pasa --auth o --providers
     if "--auth" in sys.argv or "auth" in sys.argv or "--providers" in sys.argv:
         os.system("opencode auth")
         sys.exit(0)
 
-    print(f"{C_YELLOW}🎤 Toca el icono de micrófono en tu teclado para dictar,{C_RESET}")
-    print(f"{C_YELLOW}   o escribe tu instrucción directamente:{C_RESET}\n")
+    # Construir el dossier de contexto real
+    full_context = build_full_system_context()
+    
+    print(f"{C_MAGENTA}🧠 Contexto Vivo del Sistema Recolectado:{C_RESET}")
+    print(f"{C_DIM}{full_context}{C_RESET}\n")
 
+    print(f"{C_YELLOW}🎤 Toca el micrófono de tu teclado para dictar o escribe tu orden:{C_RESET}\n")
     sys.stdout.write(f"{C_GREEN}🗣️  Tú: {C_RESET}")
     sys.stdout.flush()
     user_prompt = sys.stdin.readline().strip()
@@ -430,20 +464,31 @@ def main():
         print(f"{C_RED}⚠️ No se ingresó ninguna instrucción.{C_RESET}")
         sys.exit(0)
 
-    full_prompt = f"[Contexto Termux: {context_str.replace(chr(10), ' | ')}]\n\nInstrucción: {user_prompt}"
+    # Prompt Maestro Estructurado
+    master_prompt = f"""[ROL Y ENTORNO DEL AGENTE]:
+Eres un asistente de ingeniería y automatización experto ejecutándose en un entorno Termux real en Android.
+A continuación tienes el estado real del sistema, herramientas y scripts disponibles:
 
-    print(f"\n{C_BLUE}🤖 Iniciando OpenCode con tu prompt y contexto...{C_RESET}\n")
-    speak("Iniciando OpenCode")
+{full_context}
+
+[INSTRUCCIÓN DEL USUARIO]:
+{user_prompt}
+
+[INSTRUCCIONES DE RESPUESTA]:
+Usa las herramientas CLI, scripts y contexto proporcionados para responder de forma concisa, precisa y accionable."""
+
+    print(f"\n{C_BLUE}🤖 Transfiriendo instrucción y contexto a OpenCode...{C_RESET}\n")
+    speak("Analizando con OpenCode")
 
     opencode_bin = "/data/data/com.termux/files/usr/bin/opencode"
     if os.path.exists(opencode_bin):
-        cmd = [opencode_bin, "--prompt", full_prompt]
+        cmd = [opencode_bin, "--prompt", master_prompt]
         try:
             subprocess.run(cmd)
         except Exception as e:
             print(f"{C_RED}❌ Error ejecutando OpenCode:{C_RESET} {e}")
     else:
-        os.system(f"opencode --prompt '{full_prompt}' 2>/dev/null || agy '{user_prompt}'")
+        os.system(f"opencode --prompt '{master_prompt}' 2>/dev/null || agy '{user_prompt}'")
 
 if __name__ == "__main__":
     main()

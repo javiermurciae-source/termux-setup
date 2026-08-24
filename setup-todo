@@ -383,7 +383,6 @@ def highlight_urls(text):
     return re.sub(url_pattern, f"{C_URL}\\1{C_RESET}", text)
 
 def load_accounts():
-    # 1. Intentar cargar desde ~/.config/mail_accounts.json
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r") as f:
@@ -393,7 +392,6 @@ def load_accounts():
         except Exception:
             pass
     
-    # 2. Respaldo secundario si la app se formateó
     if os.path.exists(BACKUP_CONFIG):
         try:
             with open(BACKUP_CONFIG, "r") as f:
@@ -407,13 +405,11 @@ def load_accounts():
     return {}
 
 def save_accounts(accounts):
-    # Guardar en ~/.config
     os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
     with open(CONFIG_FILE, "w") as f:
         json.dump(accounts, f, indent=2)
     os.chmod(CONFIG_FILE, 0o600)
     
-    # Guardar copia de seguridad persistente en ~/termux-setup (que no se borra)
     try:
         os.makedirs(os.path.dirname(BACKUP_CONFIG), exist_ok=True)
         with open(BACKUP_CONFIG, "w") as f:
@@ -422,56 +418,100 @@ def save_accounts(accounts):
     except Exception:
         pass
 
-def add_account(accounts):
-    print(f"{C_YELLOW}➕ Añadir Nueva Cuenta de Gmail{C_RESET}\n")
-    email_in = input(f"{C_WHITE}📧 Correo de Gmail:{C_RESET} ").strip()
-    while not email_in:
-        email_in = input(f"{C_RED}⚠️ El correo es obligatorio:{C_RESET} ").strip()
-    
-    name_in = input(f"{C_WHITE}🏷️  Nombre o Alias para esta cuenta (ej: Personal / Trabajo) [Enter para usar correo]:{C_RESET} ").strip()
-    if not name_in:
-        name_in = email_in
+def delete_account(name):
+    accounts = load_accounts()
+    if name in accounts:
+        del accounts[name]
+        save_accounts(accounts)
 
+def test_imap_connection(email_user, email_pass):
+    try:
+        mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
+        mail.login(email_user, email_pass)
+        return mail, None
+    except Exception as e:
+        return None, e
+
+def add_account(accounts):
+    print(f"{C_YELLOW}➕ Configurar Cuenta de Gmail{C_RESET}\n")
+    
+    # 1. Correo
+    sys.stdout.write(f"{C_WHITE}📧 Correo de Gmail:{C_RESET} ")
+    sys.stdout.flush()
+    email_in = sys.stdin.readline().strip()
+    while not email_in:
+        sys.stdout.write(f"{C_RED}⚠️ El correo es obligatorio:{C_RESET} ")
+        sys.stdout.flush()
+        email_in = sys.stdin.readline().strip()
+
+    # 2. Contraseña de Aplicación
+    pass_in = ""
     try:
         pass_in = getpass.getpass(f"{C_WHITE}🔑 Contraseña de Aplicación (16 letras):{C_RESET} ").strip()
     except Exception:
-        pass_in = input(f"{C_WHITE}🔑 Contraseña de Aplicación (16 letras):{C_RESET} ").strip()
+        sys.stdout.write(f"{C_WHITE}🔑 Contraseña de Aplicación (16 letras):{C_RESET} ")
+        sys.stdout.flush()
+        pass_in = sys.stdin.readline().strip()
 
     while not pass_in:
         try:
             pass_in = getpass.getpass(f"{C_RED}⚠️ La contraseña es obligatoria:{C_RESET} ").strip()
         except Exception:
-            pass_in = input(f"{C_RED}⚠️ La contraseña es obligatoria:{C_RESET} ").strip()
+            sys.stdout.write(f"{C_RED}⚠️ La contraseña es obligatoria:{C_RESET} ")
+            sys.stdout.flush()
+            pass_in = sys.stdin.readline().strip()
 
+    # 3. Nombre o Alias
+    sys.stdout.write(f"{C_WHITE}🏷️  Nombre o Alias para esta cuenta (ej: Personal / Trabajo) [Enter para usar correo]:{C_RESET} ")
+    sys.stdout.flush()
+    name_in = sys.stdin.readline().strip()
+    if not name_in:
+        name_in = email_in
+
+    # 4. Validar conexión EN VIVO antes de guardar
+    print(f"\n{C_BLUE}⏳ Verificando credenciales con Gmail...{C_RESET}")
+    mail, err = test_imap_connection(email_in, pass_in)
+    
+    if err:
+        print(f"\n{C_RED}❌ Error de conexión o credenciales inválidas:{C_RESET} {err}")
+        print(f"{C_RED}🚫 NO se guardó la cuenta porque las credenciales fallaron.{C_RESET}")
+        print(f"{C_YELLOW}💡 Tip: Recuerda usar una App Password de 16 letras generada en Google.{C_RESET}\n")
+        sys.exit(1)
+
+    # Solo si la conexión fue exitosa al 100% se guarda
     accounts[name_in] = {"email": email_in, "password": pass_in}
     save_accounts(accounts)
-    print(f"\n{C_GREEN}💾 Cuenta '{name_in}' guardada exitosamente y protegida contra actualizaciones.{C_RESET}\n")
-    return name_in
+    print(f"{C_GREEN}✅ ¡Credenciales verificadas y cuenta '{name_in}' guardada exitosamente!{C_RESET}\n")
+    return name_in, mail
 
 print(f"{C_CYAN}╭──────────────────────────────────────────────────╮{C_RESET}")
 print(f"{C_CYAN}│        📬  STREAM-MAIL CLI (GMAIL IMAP)  ⚡      │{C_RESET}")
 print(f"{C_CYAN}╰──────────────────────────────────────────────────╯{C_RESET}\n")
 
 accounts = load_accounts()
+mail_conn = None
 
 if "--add" in sys.argv or "-a" in sys.argv:
-    selected_name = add_account(accounts)
+    selected_name, mail_conn = add_account(accounts)
 elif not accounts:
     print(f"{C_YELLOW}👋 ¡Bienvenido! Configura tu primera cuenta:{C_RESET}\n")
-    selected_name = add_account(accounts)
+    selected_name, mail_conn = add_account(accounts)
 elif len(accounts) == 1:
     selected_name = list(accounts.keys())[0]
 else:
-    print(f"{C_MAGENTA}📂 Cuentas disponibles:{C_RESET}")
+    print(f"{C_MAGENTA}📂 Cuentas guardadas:{C_RESET}")
     acc_list = list(accounts.keys())
     for idx, name in enumerate(acc_list, 1):
         email_addr = accounts[name]["email"]
         print(f"  {C_CYAN}[{idx}]{C_RESET} {C_WHITE}{name}{C_RESET} {C_DIM}({email_addr}){C_RESET}")
     print(f"  {C_YELLOW}[+]{C_RESET} Añadir otra cuenta")
     
-    choice = input(f"\n{C_GREEN}👉 Selecciona una cuenta [1-{len(acc_list)} o +]:{C_RESET} ").strip()
+    sys.stdout.write(f"\n{C_GREEN}👉 Selecciona una cuenta [1-{len(acc_list)} o +]:{C_RESET} ")
+    sys.stdout.flush()
+    choice = sys.stdin.readline().strip()
+    
     if choice == "+":
-        selected_name = add_account(accounts)
+        selected_name, mail_conn = add_account(accounts)
     elif choice.isdigit() and 1 <= int(choice) <= len(acc_list):
         selected_name = acc_list[int(choice) - 1]
     else:
@@ -481,13 +521,23 @@ active_acc = accounts[selected_name]
 EMAIL_USER = active_acc["email"]
 EMAIL_PASS = active_acc["password"]
 
-print(f"{C_BLUE}🔗 Conectando a {C_WHITE}{EMAIL_USER}{C_BLUE}...{C_RESET}")
+# Conectar si no venía conectada de la validación
+if not mail_conn:
+    print(f"{C_BLUE}🔗 Conectando a {C_WHITE}{EMAIL_USER}{C_BLUE}...{C_RESET}")
+    mail_conn, err = test_imap_connection(EMAIL_USER, EMAIL_PASS)
+    if err:
+        print(f"\n{C_RED}❌ Error al conectar:{C_RESET} {err}")
+        if "AUTHENTICATIONFAILED" in str(err):
+            print(f"{C_RED}⚠️ La cuenta '{selected_name}' tiene credenciales inválidas.{C_RESET}")
+            delete_account(selected_name)
+            print(f"{C_YELLOW}🗑️ Se eliminó automáticamente la cuenta inválida de la lista.{C_RESET}")
+            print(f"{C_YELLOW}💡 Vuelve a ejecutar 'readmail' para configurarla con una clave válida.{C_RESET}\n")
+        sys.exit(1)
 
 COUNT = 5
 
 try:
-    mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
-    mail.login(EMAIL_USER, EMAIL_PASS)
+    mail = mail_conn
     mail.select("inbox")
 
     status, messages = mail.search(None, "ALL")
@@ -552,9 +602,7 @@ try:
     print(f"{C_GREEN}✨ Sincronización completada.{C_RESET}\n")
 
 except Exception as e:
-    print(f"\n{C_RED}❌ Error:{C_RESET} {e}\n")
-    if "AUTHENTICATIONFAILED" in str(e):
-        print(f"{C_YELLOW}💡 Tip: Revisa si tu App Password de 16 letras está bien escrita.{C_RESET}\n")
+    print(f"\n{C_RED}❌ Error durante la lectura:{C_RESET} {e}\n")
 OTP_EOF
 chmod +x "$HOME_DIR/leer-correo.sh"
     ln -sf "$HOME_DIR/leer-correo.sh" "$PREFIX/bin/readmail"

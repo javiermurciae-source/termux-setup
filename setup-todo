@@ -14,6 +14,20 @@ PREFIX="/data/data/com.termux/files/usr"
 HOME_DIR="/data/data/com.termux/files/home"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+
+fetch_file() {
+    local src="$1"
+    local dest="$2"
+    if [ -f "$SCRIPT_DIR/$src" ]; then
+        cp "$SCRIPT_DIR/$src" "$dest" 2>/dev/null
+    else
+        curl -sL "https://raw.githubusercontent.com/javiermurciae-source/termux-setup/main/$src" -o "$dest" 2>/dev/null
+    fi
+    if [ ! -f "$dest" ]; then
+        warn "No se pudo obtener: $src"
+    fi
+}
+
 banner() {
     clear
     printf '\n'

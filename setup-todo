@@ -192,9 +192,9 @@ PERSONAL_FISH
 # ── 7. Core-Termux (al final) ──────────────────────────────
 
 step_termux_ui() {
-    echo -e "\n\e[1;33m❓ ¿Deseas restaurar la configuración visual personalizada (Teclas NerdFonts, Tamaños y Pinned Apps)? [s/N] (Por defecto: Mantener Original): \e[0m\c"
+    echo -e "\n\e[1;33m❓ ¿Deseas restaurar la configuración visual personalizada (Teclas NerdFonts, Tamaños y Pinned Apps)? [S/n]: \e[0m\c"
     read -r -t 15 resp_ui
-    if [[ "$resp_ui" =~ ^[sSyY]$ ]]; then
+    if [[ "$resp_ui" =~ ^([sS]|)$ ]] || [[ -z "$resp_ui" ]]; then
         log 10 "Restaurando proporciones visuales, botones y aplicaciones ancladas..."
         mkdir -p "$HOME_DIR/.termux"
     

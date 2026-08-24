@@ -41,15 +41,15 @@ step_scripts() {
 }
 
 # ── 2. Fastfetch ───────────────────────────────────────────
-step_fastfetch() {
+step_fastfetch cmatrix() {
     log 2 "Instalando config Fastfetch (config.jsonc + descargas.gif)..."
-    mkdir -p "$HOME_DIR/.config/fastfetch"
+    mkdir -p "$HOME_DIR/.config/fastfetch cmatrix"
     for f in config.jsonc descargas.gif; do
-        src="$SCRIPT_DIR/fastfetch/$f"
+        src="$SCRIPT_DIR/fastfetch cmatrix/$f"
         if [ -f "$src" ]; then
-            cp "$src" "$HOME_DIR/.config/fastfetch/$f" && ok "$f"
+            cp "$src" "$HOME_DIR/.config/fastfetch cmatrix/$f" && ok "$f"
         else
-            warn "No encontrado: fastfetch/$f"
+            warn "No encontrado: fastfetch cmatrix/$f"
         fi
     done
 }
@@ -89,7 +89,7 @@ step_packages() {
     pkg install -y glibc proot 2>/dev/null
     
     # Herramientas generales + Root + ADB
-    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang alpine espeak aapt aapt2 apksigner dx ecj 2>/dev/null
+    pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang alpine espeak aapt aapt2 apksigner dx ecj 2>/dev/null
     
     ok "Paquetes instalados (incluyendo sudo/tsu y ADB)"
 }
@@ -105,7 +105,7 @@ step_setup_launcher() {
         warn "Se detectó un config.fish corrupto. Reparando..."
     fi
     
-    if [ -x "$HOME_DIR/.local/bin/fastfetch" ] && [ -f "$HOME_DIR/.config/fish/config.fish" ]; then
+    if [ -x "$HOME_DIR/.local/bin/fastfetch cmatrix" ] && [ -f "$HOME_DIR/.config/fish/config.fish" ]; then
         ok "El showcase ya está instalado. ¡Omitiendo descarga pesada! ⚡"
     else
         warn "Descargando e instalando showcase desde GitHub..."
@@ -118,16 +118,16 @@ EOF
     fi
 
     # Enlaces globales
-    for bin in fastfetch sigye kitten setup-nvim; do
+    for bin in fastfetch cmatrix sigye kitten setup-nvim; do
         if [ -f "$HOME_DIR/.local/bin/$bin" ]; then
             ln -sf "$HOME_DIR/.local/bin/$bin" "$PREFIX/bin/$bin"
         fi
     done
 }
 
-# ── 6. Fish config + fastfetch al arrancar ─────────────────
+# ── 6. Fish config + fastfetch cmatrix al arrancar ─────────────────
 step_fish_config() {
-    log 6 "Configurando Fish + fastfetch al arrancar..."
+    log 6 "Configurando Fish + fastfetch cmatrix al arrancar..."
     
     # Redefinir el saludo directamente al final para un encuadre perfecto sin romper sintaxis
     FISH_CFG="$HOME_DIR/.config/fish/config.fish"
@@ -141,12 +141,12 @@ step_fish_config() {
 if status is-interactive
     function fish_greeting
         command clear
-        fastfetch 2>/dev/null
+        fastfetch cmatrix 2>/dev/null
     end
 end
 # FIN_SALUDO_AGY
 FISH_GREETING
-        ok "fastfetch añadido al inicio (fish_greeting)"
+        ok "fastfetch cmatrix añadido al inicio (fish_greeting)"
     fi
 
     PERSONAL="$HOME_DIR/.config/fish/conf.d/personal.fish"
@@ -515,7 +515,7 @@ chmod +x "$HOME_DIR/opencode-voice.py"
 # ══════════════════════════════════════════════════════════
 banner
 step_scripts
-step_fastfetch
+step_fastfetch cmatrix
 step_termux_config
 step_packages
 step_setup_launcher

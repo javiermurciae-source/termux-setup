@@ -1367,10 +1367,17 @@ start_server() {
         pkg install -y code-server
     fi
 
-    # Asegurar permisos de ejecución en el binario interno de node de code-server
-    chmod +x "$PREFIX/lib/code-server/bin/code-server" 2>/dev/null || true
-    chmod +x "$PREFIX/lib/code-server/lib/node" 2>/dev/null || true
-    chmod -R 755 "$PREFIX/lib/code-server" 2>/dev/null || true
+    # Arreglar permisos de dueño y ejecución en el binario node de code-server
+    if command -v sudo >/dev/null 2>&1; then
+        sudo chown -R $(id -u):$(id -g) "$PREFIX/lib/code-server" 2>/dev/null || true
+        sudo chmod -R 755 "$PREFIX/lib/code-server" 2>/dev/null || true
+    elif command -v tsu >/dev/null 2>&1; then
+        tsu -c "chown -R $(id -u):$(id -g) $PREFIX/lib/code-server && chmod -R 755 $PREFIX/lib/code-server" 2>/dev/null || true
+    elif command -v su >/dev/null 2>&1; then
+        su -c "chown -R $(id -u):$(id -g) $PREFIX/lib/code-server && chmod -R 755 $PREFIX/lib/code-server" 2>/dev/null || true
+    else
+        chmod -R 755 "$PREFIX/lib/code-server" 2>/dev/null || true
+    fi
 
     # 2. Limpiar procesos muertos o colgados
     pkill -9 -f "code-server" 2>/dev/null || true

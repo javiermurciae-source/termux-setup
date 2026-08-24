@@ -43,11 +43,11 @@ step_scripts() {
 # ── 2. Fastfetch ───────────────────────────────────────────
 step_fastfetch() {
     log 2 "Instalando config Fastfetch (config.jsonc + descargas.gif)..."
-    mkdir -p "$HOME_DIR/.config/fastfetch cmatrix"
+    mkdir -p "$HOME_DIR/.config/fastfetch"
     for f in config.jsonc descargas.gif; do
-        src="$SCRIPT_DIR/fastfetch cmatrix/$f"
+        src="$SCRIPT_DIR/fastfetch/$f"
         if [ -f "$src" ]; then
-            cp "$src" "$HOME_DIR/.config/fastfetch cmatrix/$f" && ok "$f"
+            cp "$src" "$HOME_DIR/.config/fastfetch/$f" && ok "$f"
         else
             warn "No encontrado: fastfetch cmatrix/$f"
         fi
@@ -168,17 +168,28 @@ alias fix-media='fix-media'
 alias s='sudo'
 alias adbs='adb shell'
 alias adbd='adb devices'
-alias mail='inbox'
-alias inbox='inbox'
 alias adbw='adb tcpip 5555 && adb connect'
+
+# Herramientas de Productividad y Dev
 alias mail='readmail'
 alias readmail='readmail'
+alias inbox='inbox'
 alias codc='bash ~/verificar-cod.sh'
-alias sync-setup='cd ~/termux-setup && git pull && rm -f ~/.core_setup_done && ./setup-todo'
+alias netscan='netscan'
+alias lanscan='netscan'
+alias ssh-find='ssh-find'
+alias findpc='ssh-find'
+alias transfile='transfile'
+alias pasar='transfile'
+alias vscode='vscode'
+alias code='vscode'
+alias searchsploit='searchsploit'
+alias sploit='searchsploit'
+
+# Sincronizador Maestro
+alias sync-setup='cd ~/termux-setup && git pull && rm -f ~/.core_setup_done && bash ./setup-todo'
 
 set -gx PATH $HOME/.local/bin $PATH
-
-# Variables de entorno Java (Requeridas por Apktool y Jadx)
 set -gx JAVA_HOME $PREFIX
 PERSONAL_FISH
     ok "Alias y rutas de sistema sincronizados (personal.fish)"
@@ -307,6 +318,30 @@ tree.write(prefs, encoding="utf-8", xml_declaration=True)
 
 step_core_termux() {
     log 7 "Verificando Core-Termux y Agentes de IA..."
+    
+    if [ -x "$PREFIX/bin/core" ]; then
+        ok "Core-Termux ya está instalado. ¡Omitiendo reinstalación! ⚡"
+    else
+        warn "Instalando motor Core-Termux..."
+        curl -fSLO https://raw.githubusercontent.com/DevCoreXOfficial/core-termux/main/install.sh
+        # Hack para forzar que el instalador de core-termux muestre TODOS los errores
+        sed -i 's|&>/dev/null||g' install.sh
+        sed -i 's|>/dev/null 2>&1||g' install.sh
+        bash install.sh || warn "Advertencia: El instalador de Core-Termux arrojó un error."
+        rm -f install.sh
+    fi
+    
+    if [ -x "$PREFIX/bin/core" ]; then
+        ok "Core-Termux ya está instalado. ¡Omitiendo reinstalación! ⚡"
+    else
+        warn "Instalando motor Core-Termux..."
+        curl -fSLO https://raw.githubusercontent.com/DevCoreXOfficial/core-termux/main/install.sh
+        # Hack para forzar que el instalador de core-termux muestre TODOS los errores
+        sed -i 's|&>/dev/null||g' install.sh
+        sed -i 's|>/dev/null 2>&1||g' install.sh
+        bash install.sh || warn "Advertencia: El instalador de Core-Termux arrojó un error."
+        rm -f install.sh
+    fi
     
     if [ -x "$PREFIX/bin/core" ]; then
         ok "Core-Termux ya está instalado. ¡Omitiendo reinstalación! ⚡"
@@ -515,7 +550,7 @@ chmod +x "$HOME_DIR/opencode-voice.py"
 # ══════════════════════════════════════════════════════════
 banner
 step_scripts
-step_fastfetch cmatrix
+step_fastfetch
 step_termux_config
 step_packages
 step_setup_launcher

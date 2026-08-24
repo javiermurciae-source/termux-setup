@@ -89,7 +89,7 @@ step_packages() {
     pkg install -y glibc proot 2>/dev/null
     
     # Herramientas generales + Root + ADB
-    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang aerc neomutt 2>/dev/null
+    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang alpine 2>/dev/null
     
     ok "Paquetes instalados (incluyendo sudo/tsu y ADB)"
 }
@@ -168,7 +168,7 @@ alias fix-media='fix-media'
 alias s='sudo'
 alias adbs='adb shell'
 alias adbd='adb devices'
-alias mail='aerc'
+alias mail='alpine'
 alias adbw='adb tcpip 5555 && adb connect'
 alias codc='bash ~/verificar-cod.sh'
 alias sync-setup='cd ~/termux-setup && git pull && rm -f ~/.core_setup_done && ./setup-todo'
@@ -454,7 +454,7 @@ printf '  \e[34m🌟 Showcase:\e[0m    Fish + OhMyPosh + Neovim + eza\n'
 printf '  \e[34m⚡ Core-Termux:\e[0m  instalado\n'
 printf '  \e[34m🕵️ Recon & Fuzzing:\e[0m WhatWeb, Nmap, Ffuf y SecLists listos\n'
 printf '  \e[34m🔬 Lab Avanzado:\e[0m    Java, Gradle, Apktool, tcpdump\n'
-printf '  \e[34m📬 Correo CLI:\e[0m   Aerc & Neomutt (comando: mail / aerc)\n'
+printf '  \e[34m📬 Correo CLI:\e[0m   Alpine (fácil y con menús, comando: mail / alpine)\n'
 printf '  \e[34m📋 Scripts:\e[0m     horario · gif-selector · portapapeles\n'
 echo ""
 nyancat 2>/dev/null &

@@ -1367,6 +1367,11 @@ start_server() {
         pkg install -y code-server
     fi
 
+    # Asegurar permisos de ejecución en el binario interno de node de code-server
+    chmod +x "$PREFIX/lib/code-server/bin/code-server" 2>/dev/null || true
+    chmod +x "$PREFIX/lib/code-server/lib/node" 2>/dev/null || true
+    chmod -R 755 "$PREFIX/lib/code-server" 2>/dev/null || true
+
     # 2. Limpiar procesos muertos o colgados
     pkill -9 -f "code-server" 2>/dev/null || true
 

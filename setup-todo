@@ -418,10 +418,8 @@ try:
                 print(f"🔸 De: {sender}")
                 print(f"🔹 Asunto: {subject}")
                 
-                # Vista previa limpia del cuerpo
-                preview = "\n".join([line.strip() for line in body.splitlines() if line.strip()][:4])
-                print(f"📄 Contenido:\n{preview}")
-                print("-" * 50)
+                print(f"📄 Contenido Completo:\n{body.strip()}")
+                print("=" * 60)
 
     mail.logout()
 except Exception as e:

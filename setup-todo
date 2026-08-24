@@ -168,7 +168,8 @@ alias fix-media='fix-media'
 alias s='sudo'
 alias adbs='adb shell'
 alias adbd='adb devices'
-alias mail='alpine'
+alias mail='inbox'
+alias inbox='inbox'
 alias adbw='adb tcpip 5555 && adb connect'
 alias codc='bash ~/verificar-cod.sh'
 alias sync-setup='cd ~/termux-setup && git pull && rm -f ~/.core_setup_done && ./setup-todo'
@@ -344,9 +345,23 @@ step_fish_config
 step_recon_scraping() {
     log 8 "Instalando entorno de Web Scraping y Reconocimiento (WhatWeb)..."
     
+    # CLI-Inbox (Gestor de Gmail en Python moderno con TUI)
+    if [ ! -d "$HOME_DIR/.local/share/CLI-Inbox" ]; then
+        log 8.05 "Instalando CLI-Inbox (Gestor de correo Gmail para terminal)..."
+        git clone --depth 1 https://github.com/artur3333/CLI-Inbox.git "$HOME_DIR/.local/share/CLI-Inbox" >/dev/null 2>&1
+        cat << 'INBOX_EOF' > "$PREFIX/bin/inbox"
+#!/data/data/com.termux/files/usr/bin/bash
+python "$HOME/.local/share/CLI-Inbox/main.py" "$@"
+INBOX_EOF
+        chmod +x "$PREFIX/bin/inbox"
+        ok "CLI-Inbox instalado (Comando: inbox) 📬"
+    else
+        ok "CLI-Inbox ya está instalado. ¡Omitiendo! ⚡"
+    fi
+
     # Librerías de Python para Scraping (requests, bs4)
     pip install --upgrade pip >/dev/null 2>&1
-    pip install requests beautifulsoup4 >/dev/null 2>&1
+    pip install requests beautifulsoup4 rich prompt_toolkit keyring html2text >/dev/null 2>&1
     ok "Librerías de Python para Scraping instaladas"
     
     # Instalación de WhatWeb (Escáner de huellas y tecnologías web)
@@ -454,7 +469,7 @@ printf '  \e[34m🌟 Showcase:\e[0m    Fish + OhMyPosh + Neovim + eza\n'
 printf '  \e[34m⚡ Core-Termux:\e[0m  instalado\n'
 printf '  \e[34m🕵️ Recon & Fuzzing:\e[0m WhatWeb, Nmap, Ffuf y SecLists listos\n'
 printf '  \e[34m🔬 Lab Avanzado:\e[0m    Java, Gradle, Apktool, tcpdump\n'
-printf '  \e[34m📬 Correo CLI:\e[0m   Alpine (fácil y con menús, comando: mail / alpine)\n'
+printf '  \e[34m📬 Correo CLI:\e[0m   CLI-Inbox (Moderno para Gmail, comando: inbox / mail)\n'
 printf '  \e[34m📋 Scripts:\e[0m     horario · gif-selector · portapapeles\n'
 echo ""
 nyancat 2>/dev/null &

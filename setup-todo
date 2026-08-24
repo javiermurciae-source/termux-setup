@@ -171,8 +171,9 @@ alias adbd='adb devices'
 alias mail='inbox'
 alias inbox='inbox'
 alias adbw='adb tcpip 5555 && adb connect'
-alias codc='getcode'
-alias getcode='getcode'
+alias mail='readmail'
+alias readmail='readmail'
+alias codc='bash ~/verificar-cod.sh'
 alias sync-setup='cd ~/termux-setup && git pull && rm -f ~/.core_setup_done && ./setup-todo'
 
 set -gx PATH $HOME/.local/bin $PATH
@@ -347,9 +348,9 @@ step_recon_scraping() {
     log 8 "Instalando entorno de Web Scraping y Reconocimiento (WhatWeb)..."
     
     # Script utilitario: Extractor de Códigos/OTP por IMAP (Gmail / Dominio propio)
-    cat << 'OTP_EOF' > "$HOME_DIR/verificar-cod.sh"
+    cat << 'OTP_EOF' > "$HOME_DIR/leer-correo.sh"
 #!/data/data/com.termux/files/usr/bin/bash
-# Extractor rápido de códigos de verificación por IMAP
+# Lector puro y directo de correos por IMAP
 python - << 'PYEOF'
 import imaplib
 import email
@@ -384,7 +385,7 @@ try:
     mail_ids = messages[0].split()
     latest_ids = mail_ids[-5:] # Últimos 5
 
-    print("\n📩 --- ÚLTIMOS CÓDIGOS DE VERIFICACIÓN DETECTADOS --- 📩\n")
+    print("\n📩 --- ÚLTIMOS CORREOS RECIBIDOS (IMAP) --- 📩\n")
     for mail_id in reversed(latest_ids):
         res, msg_data = mail.fetch(mail_id, "(RFC822)")
         for response_part in msg_data:
@@ -426,9 +427,10 @@ except Exception as e:
     print(f"[1;31m❌ Error al conectar:[0m {e}")
 PYEOF
 OTP_EOF
-    chmod +x "$HOME_DIR/verificar-cod.sh"
-    ln -sf "$HOME_DIR/verificar-cod.sh" "$PREFIX/bin/getcode"
-    ok "Script extractor de códigos OTP instalado (Comando: getcode / codc) 🔑"
+    chmod +x "$HOME_DIR/leer-correo.sh"
+    ln -sf "$HOME_DIR/leer-correo.sh" "$PREFIX/bin/readmail"
+    ln -sf "$HOME_DIR/leer-correo.sh" "$PREFIX/bin/leer-correo"
+    ok "Lector de correos IMAP instalado (Comando: readmail / mail) 📬"
 
     # CLI-Inbox (Gestor de Gmail en Python moderno con TUI)
     if [ ! -d "$HOME_DIR/.local/share/CLI-Inbox" ]; then

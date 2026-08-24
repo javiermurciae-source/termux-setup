@@ -224,11 +224,17 @@ else:
 def set_val(tag, name, val):
     for elem in root.findall(tag):
         if elem.get('name') == name:
-            elem.set('value', val)
+            if tag == 'string':
+                elem.text = val
+            else:
+                elem.set('value', val)
             return
     new_elem = ET.SubElement(root, tag)
     new_elem.set('name', name)
-    new_elem.set('value', val)
+    if tag == 'string':
+        new_elem.text = val
+    else:
+        new_elem.set('value', val)
     
 set_val('float', 'in_app_keyboard_height_scale', '0.709')
 set_val('float', 'in_app_keyboard_key_margin_scale', '2.96')

@@ -24,7 +24,8 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
 * 🔑 **`codc` / `verificar-cod.sh`:** Extractor automatizado de códigos 2FA/OTP por IMAP.
 * 📦 **`inbox` (CLI-Inbox):** Cliente completo de Gmail para terminal basado en Rich y Prompt Toolkit.
 
-### 🕵️ 3. Reconocimiento de Red, Fuzzing & Scraping
+### 🕵️ 3. Reconocimiento de Red, Fuzzing & Vulnerabilidades
+* 🛡️ **`searchsploit` (o `sploit`):** Motor de búsqueda CLI offline oficial de **Exploit Database (Exploit-DB)**. Permite buscar vulnerabilidades conocidas, CVEs, versiones de software y PoCs directamente desde Termux sin conexión a internet.
 * 📦 **`transfile` (o `pasar`):** Gestor interactivo de transferencia de archivos (PC <-> Termux) con soporte para Rsync, SCP y servidor Web HTTP temporal.
 * ⚡ **`ssh-find` (o `ssh-pc` / `findpc`):** Escáner automático de servidores SSH en la red Wi-Fi.
 * ⚡ **`ssh-find` (o `ssh-pc` / `findpc`):** Escáner automático de servidores SSH en la red Wi-Fi. **Encuentra la IP cambiante de tu PC al instante y te conecta con 1 solo toque** sin tener que memorizar IPs dinámicas.

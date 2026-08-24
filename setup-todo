@@ -1393,6 +1393,18 @@ CODE_EOF
     ln -sf "$HOME_DIR/vscode.sh" "$PREFIX/bin/codeserver"
     ok "Visual Studio Code Server configurado (Comando: vscode / code-web) 💻"
 
+    # Exploit Database & SearchSploit (Buscador offline de CVEs y vulnerabilidades)
+    if [ ! -d "$HOME_DIR/.local/share/exploitdb" ]; then
+        log 8.3 "Instalando SearchSploit (Exploit-DB offline)..."
+        git clone --depth 1 https://github.com/offensive-security/exploitdb.git "$HOME_DIR/.local/share/exploitdb" >/dev/null 2>&1
+        sed -i "s|/opt/exploitdb|$HOME/.local/share/exploitdb|g" "$HOME_DIR/.local/share/exploitdb/.searchsploit_rc" 2>/dev/null || true
+        ln -sf "$HOME_DIR/.local/share/exploitdb/searchsploit" "$PREFIX/bin/searchsploit"
+        ln -sf "$HOME_DIR/.local/share/exploitdb/searchsploit" "$PREFIX/bin/sploit"
+        ok "SearchSploit configurado exitosamente (Comando: searchsploit / sploit) 🛡️"
+    else
+        ok "SearchSploit ya está instalado. ¡Omitiendo! ⚡"
+    fi
+
     # CLI-Inbox (Gestor de Gmail en Python moderno con TUI)
     if [ ! -d "$HOME_DIR/.local/share/CLI-Inbox" ]; then
         log 8.05 "Instalando CLI-Inbox (Gestor de correo Gmail para terminal)..."

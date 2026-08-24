@@ -72,7 +72,13 @@ step_termux_config() {
 
 # ── 4. Paquetes base ───────────────────────────────────────
 step_packages() {
-    log 4 "Actualizando e instalando paquetes base, glibc y herramientas Root/ADB..."
+    log 4 "Optimizando servidores de descarga (Mirrors automáticos a Grimler)..."
+    echo "deb https://grimler.se/termux/termux-main stable main" > $PREFIX/etc/apt/sources.list
+    if [ -f "$PREFIX/etc/apt/sources.list.d/root.list" ]; then
+        echo "deb https://grimler.se/termux/termux-root root stable" > $PREFIX/etc/apt/sources.list.d/root.list
+    fi
+    
+    log 4.1 "Actualizando e instalando paquetes base, glibc y herramientas Root/ADB..."
     pkg update -y && pkg upgrade -y 2>/dev/null
     
     # Repositorios extra

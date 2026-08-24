@@ -326,12 +326,9 @@ step_core_termux() {
     cat << 'VOICE_EOF' > "$HOME_DIR/opencode-voice.py"
 #!/data/data/com.termux/files/usr/bin/python3
 """
-🎙️ OPENCODE VOICE SUITE 100% FUNCIONAL Y DIRECTO
-1. Pide tu orden limpia por micrófono de teclado o texto.
-2. Inyecta todo el contexto real del sistema, hardware, scripts y correo.
-3. Ejecuta OpenCode en vivo en pantalla.
-4. ¡HABLA LA RESPUESTA EN VOZ ALTA CON EL MOTOR DE VOZ!
-5. Vuelve a pedir la siguiente orden inmediatamente para conversación continua.
+🎙️ OPENCODE ASISTENTE POR VOZ ULTRA-RÁPIDO
+- Modo Conversación Continua: Dictas -> OpenCode Responde -> Habla en Voz Alta -> Vuelve a escuchar
+- Compatible 100% con el micrófono de dictado de voz de tu teclado
 """
 
 import subprocess
@@ -354,7 +351,7 @@ C_RESET = "\033[0m"
 def clean_for_tts(text):
     if not text:
         return ""
-    text = re.sub(r'```[\s\S]*?```', ' He generado el código en pantalla. ', text)
+    text = re.sub(r'```[\s\S]*?```', ' He generado el bloque de código en pantalla. ', text)
     text = re.sub(r'https?://\S+', ' un enlace web ', text)
     text = re.sub(r'[#*_`~>|┌┐└┘├┤│─╭╮╰╯═]', '', text)
     text = ' '.join(text.split())
@@ -362,68 +359,64 @@ def clean_for_tts(text):
         text = text[:350] + "... y los demás detalles están en pantalla."
     return text
 
-def speak_direct(text):
-    """Habla inmediatamente por el altavoz sin intermediarios que se congelen"""
+def speak(text):
+    """Habla inmediatamente por el altavoz"""
     if not text:
         return
     clean_text = clean_for_tts(text)
     if not clean_text or len(clean_text) < 2:
         return
     
-    # 1. Intentar Android Broadcast TTS directo (0 seg lag)
+    # 1. Android Broadcast TTS (Google Voice)
     try:
-        escaped_text = clean_text.replace('"', '\\"').replace("'", "")
-        cmd = f'am broadcast --user 0 -a com.termux.api.action.TTS_SPEAK -n com.termux.api/.TermuxApiReceiver --es text "{escaped_text}"'
+        escaped = clean_text.replace('"', '\\"').replace("'", "")
+        cmd = f'am broadcast --user 0 -a com.termux.api.action.TTS_SPEAK -n com.termux.api/.TermuxApiReceiver --es text "{escaped}"'
         subprocess.run(["su", "-c", cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
     except Exception:
         pass
 
-    # 2. Motor de audio nativo espeak en español (100% garantizado en Termux)
+    # 2. Espeak motor nativo español
     try:
         subprocess.run(["espeak", "-v", "es", "-s", "165", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
 
-def get_system_context_fast():
-    """Recolecta contexto de forma instantánea sin comandos que se congelen"""
+def get_system_context():
     ctx = []
-    ctx.append("• Dispositivo: Android / Infinix X6878 (ARM64)")
-    ctx.append("• Entorno: Termux + Fish Shell (PickleHik3 Launcher)")
-    ctx.append("• Root Superusuario: DISPONIBLE (su/tsu)")
+    ctx.append("• Dispositivo: Android Infinix X6878 (ARM64)")
+    ctx.append("• Entorno: Termux + Fish Shell")
+    ctx.append("• Root: DISPONIBLE (su/tsu)")
     
-    # Scripts en home
     home = os.path.expanduser("~")
     if os.path.exists(home):
         scripts = [f for f in os.listdir(home) if f.endswith(".sh") or f.endswith(".py")]
-        ctx.append(f"• Scripts en Home: {', '.join(scripts)}")
+        ctx.append(f"• Scripts: {', '.join(scripts)}")
 
-    # Cuentas de correo
     mail_cfg = os.path.expanduser("~/.config/mail_accounts.json")
     if os.path.exists(mail_cfg):
         try:
             with open(mail_cfg) as f:
                 accs = json.load(f)
-                ctx.append(f"• Cuentas de Correo IMAP: {', '.join(accs.keys())}")
+                ctx.append(f"• Cuentas IMAP: {', '.join(accs.keys())}")
         except Exception:
             pass
 
-    ctx.append("• Herramientas CLI: readmail, verificar-cod.sh (codc), nmap, tcpdump, tshark, jadx, apktool, ffuf")
     return "\n".join(ctx)
 
 def main():
     print(f"{C_CYAN}╭────────────────────────────────────────────────────────╮{C_RESET}")
-    print(f"{C_CYAN}│   🎙️  OPENCODE CONVERSACIÓN CONTINUA POR VOZ  ⚡       │{C_RESET}")
+    print(f"{C_CYAN}│   🎙️  OPENCODE CONVERSACIÓN TOTAL POR VOZ  ⚡          │{C_RESET}")
     print(f"{C_CYAN}╰────────────────────────────────────────────────────────╯{C_RESET}\n")
 
     if "--auth" in sys.argv or "auth" in sys.argv or "--providers" in sys.argv:
         os.system("opencode auth")
         sys.exit(0)
 
-    system_context = get_system_context_fast()
-    speak_direct("Asistente listo. Dime tu orden.")
+    system_context = get_system_context()
+    speak("Asistente de voz activado. Te escucho.")
 
     while True:
-        print(f"{C_YELLOW}🎤 Toca el micrófono en tu teclado para dictar (o escribe 'salir'):{C_RESET}")
+        print(f"{C_YELLOW}🎙️  [MICRÓFONO LISTO] Toca el icono de voz en tu teclado y habla:{C_RESET}")
         sys.stdout.write(f"{C_GREEN}🗣️  Tú: {C_RESET}")
         sys.stdout.flush()
         
@@ -434,14 +427,14 @@ def main():
 
         if user_prompt.lower() in ["salir", "exit", "quit", "terminar", "apagar", "chao"]:
             print(f"\n{C_YELLOW}👋 Finalizando asistente de voz. ¡Hasta luego!{C_RESET}\n")
-            speak_direct("Hasta luego")
+            speak("Hasta luego")
             break
 
-        print(f"\n{C_BLUE}🤖 Procesando con OpenCode...{C_RESET}\n")
+        print(f"\n{C_BLUE}🤖 OpenCode procesando...{C_RESET}\n")
 
         master_prompt = f"""[DIRECTIVA OBLIGATORIA DE VOZ]:
 Eres un asistente de voz interactivo en Termux Android.
-CADA RESPUESTA que des debe ser concisa y clara porque será sintetizada en voz alta por el altavoz.
+CADA RESPUESTA que des debe ser concisa, clara y accionable porque será sintetizada en voz alta por el altavoz.
 Usa las herramientas de Termux y del sistema según corresponda.
 
 [CONTEXTO DEL SISTEMA]:
@@ -472,7 +465,7 @@ Usa las herramientas de Termux y del sistema según corresponda.
         # ¡HABLARRRR LA RESPUESTA EN VOZ ALTA!
         if full_response.strip():
             print(f"\n{C_GREEN}🗣️ Hablando respuesta por el altavoz...{C_RESET}")
-            speak_direct(full_response)
+            speak(full_response)
 
         print(f"\n{C_CYAN}────────────────────────────────────────────────────────{C_RESET}\n")
 

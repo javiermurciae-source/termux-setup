@@ -32,10 +32,16 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
   * `SecLists`: Diccionario masivo de auditoría y pentesting (~1GB).
 * 🌐 **Herramientas de red:** `nmap`, `whois`, `dnsutils`.
 
-### 🔬 4. Laboratorio Avanzado & Reversing Android
+### 📱 4. Suite Android SDK, Build-Tools & Reversing
+* 🛠️ **Android SDK Build-Tools:**
+  * `aapt` & `aapt2`: Compilador y empaquetador de recursos Android.
+  * `apksigner`: Firmador criptográfico de APKs (v1, v2, v3, v4).
+  * `dx` & `ecj`: Compilador Java Bytecode a Dalvik DEX (`.dex`).
+  * `adb` & `fastboot`: Herramientas de depuración y flasheo (`android-tools`).
+* 🔬 **Ingeniería Inversa:** `jadx` (descompilador Java) y `apktool`.
+* ☕ **Entorno Java:** OpenJDK 17 (`JAVA_HOME` preconfigurado) y `gradle`.
+
 * 📶 **Sniffers Wi-Fi/Red:** `tcpdump`, `tshark` (Wireshark CLI).
-* ☕ **Desarrollo:** OpenJDK 17 (`JAVA_HOME` preconfigurado) y compilador `gradle`.
-* 🧩 **Ingeniería Inversa:** `jadx` y `apktool` (mediante repositorios TUR oficiales).
 
 ### 🎨 5. Estética, Shell & UI Restaurable
 * 🐟 **Shell:** `fish` con Oh My Posh, Fastfetch y temas personalizados.

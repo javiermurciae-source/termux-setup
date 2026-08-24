@@ -1360,37 +1360,27 @@ open_url_android() {
 start_server() {
     show_header
     
-    # 1. Verificar si code-server está disponible
-    if ! command -v code-server >/dev/null 2>&1; then
-        echo -e "${C_YELLOW}📦 Instalando code-server desde repositorios TUR...${C_RESET}"
-        pkg install -y tur-repo >/dev/null 2>&1
-        pkg install -y code-server
+    # 1. Enlace simbólico de node si el binario empaquetado da Permission Denied
+    if [ -f "$PREFIX/bin/node" ]; then
+        ln -sf "$PREFIX/bin/node" "$PREFIX/lib/code-server/lib/node" 2>/dev/null || true
     fi
 
-    # Arreglar permisos de dueño y ejecución en el binario node de code-server
-    if command -v sudo >/dev/null 2>&1; then
-        sudo chown -R $(id -u):$(id -g) "$PREFIX/lib/code-server" 2>/dev/null || true
-        sudo chmod -R 755 "$PREFIX/lib/code-server" 2>/dev/null || true
-    elif command -v tsu >/dev/null 2>&1; then
-        tsu -c "chown -R $(id -u):$(id -g) $PREFIX/lib/code-server && chmod -R 755 $PREFIX/lib/code-server" 2>/dev/null || true
-    elif command -v su >/dev/null 2>&1; then
-        su -c "chown -R $(id -u):$(id -g) $PREFIX/lib/code-server && chmod -R 755 $PREFIX/lib/code-server" 2>/dev/null || true
-    else
-        chmod -R 755 "$PREFIX/lib/code-server" 2>/dev/null || true
-    fi
-
-    # 2. Limpiar procesos muertos o colgados
+    # 2. Limpiar procesos anteriores
     pkill -9 -f "code-server" 2>/dev/null || true
 
-    echo -e "${C_BLUE}⏳ Levantando VS Code Server en puerto 8080...${C_RESET}"
+    echo -e "${C_BLUE}⏳ Levantando VS Code Server con el motor Node nativo de Termux...${C_RESET}"
     
-    # Iniciar con soporte de sockets limpio
-    nohup code-server --auth none --bind-addr 127.0.0.1:8080 --disable-telemetry --disable-update-check "$HOME" > "$LOG_FILE" 2>&1 &
+    # Iniciar usando node nativo directamente sobre el punto de entrada de code-server
+    ENTRY_FILE="$PREFIX/lib/code-server/out/node/entry.js"
+    if [ -f "$ENTRY_FILE" ]; then
+        nohup node "$ENTRY_FILE" --auth none --bind-addr 127.0.0.1:8080 --disable-telemetry --disable-update-check "$HOME" > "$LOG_FILE" 2>&1 &
+    else
+        nohup code-server --auth none --bind-addr 127.0.0.1:8080 --disable-telemetry --disable-update-check "$HOME" > "$LOG_FILE" 2>&1 &
+    fi
     
-    # Esperar activamente a que el servidor responda HTTP 200/302
     echo -e "${C_DIM}Esperando respuesta del servidor web...${C_RESET}"
     SUCCESS=0
-    for i in {1..12}; do
+    for i in {1..15}; do
         if curl -s -I "http://127.0.0.1:8080" 2>/dev/null | grep -q "HTTP/"; then
             SUCCESS=1
             break
@@ -1421,6 +1411,7 @@ stop_server() {
     show_header
     echo -e "${C_RED}🛑 Deteniendo todas las instancias de VS Code Server...${C_RESET}"
     pkill -9 -f "code-server" 2>/dev/null || true
+    pkill -9 -f "node.*entry.js" 2>/dev/null || true
     echo -e "${C_GREEN}✅ Servidor detenido.${C_RESET}\n"
 }
 
@@ -1429,7 +1420,7 @@ status_server() {
     if curl -s -I "http://127.0.0.1:8080" 2>/dev/null | grep -q "HTTP/"; then
         echo -e "${C_GREEN}🟢 Estado: ACTIVO Y RESPONDIENDO (Puerto 8080)${C_RESET}"
         echo -e "👉 ${C_CYAN}http://127.0.0.1:8080${C_RESET}\n"
-    elif pgrep -f "code-server" >/dev/null 2>&1; then
+    elif pgrep -f "code-server|entry.js" >/dev/null 2>&1; then
         echo -e "${C_YELLOW}🟡 Estado: Proceso activo pero esperando conexión HTTP...${C_RESET}\n"
     else
         echo -e "${C_RED}🔴 Estado: DETENIDO${C_RESET}\n"

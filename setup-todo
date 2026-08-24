@@ -1460,13 +1460,14 @@ step_advanced_lab() {
     log 9 "Instalando Laboratorio Avanzado (Redes, Ing. Inversa y Desarrollo)..."
 
     # 1. Analista de Red (Sniffers)
-    log 9.1 "Instalando Analizadores de Red (tcpdump, tshark)..."
-    pkg install -y tcpdump tshark >/dev/null 2>&1
+    log 9.1 "Instalando Analizadores de Red (tcpdump, tshark, wireshark-cli)..."
+    DEBIAN_FRONTEND=noninteractive pkg install -y -o Dpkg::Options::="--force-confold" tcpdump tshark >/dev/null 2>&1 || true
     
     # 2. Creación de Apps (Java JDK y Gradle)
     if ! command -v gradle >/dev/null 2>&1; then
-        log 9.2 "Instalando Java JDK 17 y compilador Gradle (Esto tardará un momento)..."
-        pkg install -y openjdk-17 gradle
+        log 9.2 "Instalando Java JDK 17 y compilador Gradle..."
+        DEBIAN_FRONTEND=noninteractive pkg install -y -o Dpkg::Options::="--force-confold" openjdk-17 gradle >/dev/null 2>&1 || true
+        ok "Java y Gradle configurados ☕"
     else
         ok "Java y Gradle ya instalados. ¡Omitiendo! ⚡"
     fi

@@ -329,9 +329,8 @@ step_core_termux() {
 🎙️ OPENCODE VOICE & CONTEXT SUITE (Termux AI Agent)
 - Entrada por Voz (Micrófono Teclado)
 - Salida por Voz Hablada en Español (espeak nativo + termux-tts-speak)
-- Apertura 100% Interactiva de la TUI de OpenCode con prompt pre-cargado
-- Control total de Hardware vía Termux:API
-- Contexto vivo del sistema y scripts locales
+- Copia directa al Portapapeles del Prompt Maestro
+- Apertura 100% Nativa de la Interfaz TUI de OpenCode
 """
 
 import subprocess
@@ -386,6 +385,13 @@ def get_clipboard():
     except Exception:
         pass
     return ""
+
+def set_clipboard(text):
+    try:
+        p = subprocess.Popen(["termux-clipboard-set"], stdin=subprocess.PIPE)
+        p.communicate(input=text.encode("utf-8"))
+    except Exception:
+        pass
 
 def build_full_system_context():
     ctx = []
@@ -495,16 +501,15 @@ Tienes a tu disposición el hardware del teléfono a través de Termux:API, acce
 2. Si el usuario te pide consultar correos o cuentas, usa el contexto de `readmail` e IMAP.
 3. Responde de forma concisa, técnica, precisa y accionable en Markdown."""
 
-    print(f"\n{C_BLUE}🚀 Abriendo la interfaz interactiva de OpenCode...{C_RESET}\n")
-    speak("Abriendo OpenCode")
+    # Copiar el prompt enriquecido al portapapeles
+    set_clipboard(master_prompt)
 
-    opencode_bin = "/data/data/com.termux/files/usr/bin/opencode"
-    
-    # Reemplazar el proceso actual por OpenCode interactivo pasando --prompt
-    if os.path.exists(opencode_bin):
-        os.execv(opencode_bin, [opencode_bin, "--prompt", master_prompt])
-    else:
-        os.system(f"opencode --prompt '{master_prompt}' 2>/dev/null || agy '{user_prompt}'")
+    print(f"\n{C_GREEN}📋 Prompt y contexto copiados al portapapeles.{C_RESET}")
+    print(f"{C_BLUE}🚀 Abriendo interfaz interactiva de OpenCode (TUI)...{C_RESET}\n")
+    speak("Abriendo interfaz de OpenCode")
+
+    # Iniciar opencode en modo interactivo en primer plano directamente
+    os.system(f"opencode --prompt '{master_prompt}'")
 
 if __name__ == "__main__":
     main()

@@ -25,6 +25,8 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
 * 📦 **`inbox` (CLI-Inbox):** Cliente completo de Gmail para terminal basado en Rich y Prompt Toolkit.
 
 ### 🕵️ 3. Reconocimiento de Red, Fuzzing & Scraping
+* ⚡ **`ssh-find` (o `ssh-pc` / `findpc`):** Escáner automático de servidores SSH en la red Wi-Fi. **Encuentra la IP cambiante de tu PC al instante y te conecta con 1 solo toque** sin tener que memorizar IPs dinámicas.
+* 🌐 **`netscan` (o `lan-scan`):** Escáner interactivo de red local que lista **todas las IPs conectadas al Wi-Fi, direcciones MAC, puertas de enlace (Router) y marcas/fabricantes** con tabla ANSI formateada.
 * 🌐 **`netscan` (o `lan-scan`):** Escáner interactivo de red local que lista **todas las IPs conectadas al Wi-Fi, direcciones MAC, puertas de enlace (Router) y marcas/fabricantes** con tabla ANSI formateada.
 * 🔍 **WhatWeb:** Escáner avanzado de tecnologías y huellas de servidores web.
 * 🕸️ **Web Scraping:** Python `requests`, `beautifulsoup4` y `html2text`.

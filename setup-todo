@@ -998,6 +998,148 @@ SCAN_EOF
     ln -sf "$HOME_DIR/netscan.py" "$PREFIX/bin/lan-scan"
     ok "Escáner de red local instalado (Comando: netscan / lan-scan) 🌐"
 
+    # Script utilitario: SSH-Finder (Detector automático de IPs de PC y conexión SSH con 1 toque)
+    cat << 'SSH_EOF' > "$HOME_DIR/ssh-finder.py"
+#!/data/data/com.termux/files/usr/bin/python3
+"""
+⚡ SSH-FINDER & AUTO-CONNECT CLI
+1. Escanea toda tu red Wi-Fi buscando servidores SSH activos (Puerto 22 u 8022).
+2. Identifica tu PC / Servidor Linux / Termux automáticamente.
+3. Te permite conectarte con 1 solo toque o muestra la IP exacta de tu PC.
+"""
+
+import subprocess
+import os
+import sys
+import re
+import socket
+
+# Paleta de Colores ANSI
+C_CYAN = "\033[1;36m"
+C_BLUE = "\033[1;34m"
+C_GREEN = "\033[1;32m"
+C_YELLOW = "\033[1;33m"
+C_MAGENTA = "\033[1;35m"
+C_RED = "\033[1;31m"
+C_WHITE = "\033[1;37m"
+C_DIM = "\033[2;37m"
+C_BOLD = "\033[1m"
+C_RESET = "\033[0m"
+
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "192.168.1.50"
+
+def scan_ssh_servers():
+    my_ip = get_local_ip()
+    subnet = ".".join(my_ip.split(".")[:3]) + ".0/24"
+
+    print(f"\n{C_BLUE}🔍 Buscando equipos con SSH activo (puertos 22 y 8022) en {C_WHITE}{subnet}{C_BLUE}...{C_RESET}")
+
+    # Escaneo ultra-rápido de nmap buscando puerto 22 (Linux/PC) y 8022 (Termux)
+    cmd = ["nmap", "-p", "22,8022", "--open", "-sV", "--min-rate", "300", subnet]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+        output = res.stdout
+    except Exception:
+        output = ""
+
+    servers = []
+    current_ip = None
+    current_host = "Desconocido"
+
+    for line in output.splitlines():
+        if "Nmap scan report for" in line:
+            parts = line.replace("Nmap scan report for", "").strip().split()
+            if len(parts) == 1:
+                current_ip = parts[0].strip("()")
+                current_host = "PC / Host"
+            elif len(parts) >= 2:
+                current_host = parts[0]
+                current_ip = parts[1].strip("()")
+        elif "22/tcp" in line and "open" in line and current_ip:
+            banner = line.replace("22/tcp open  ssh", "").strip()
+            servers.append({
+                "ip": current_ip,
+                "port": 22,
+                "hostname": current_host,
+                "type": "PC / Servidor Linux",
+                "banner": banner if banner else "OpenSSH"
+            })
+        elif "8022/tcp" in line and "open" in line and current_ip:
+            banner = line.replace("8022/tcp open  ssh", "").strip()
+            servers.append({
+                "ip": current_ip,
+                "port": 8022,
+                "hostname": current_host,
+                "type": "Dispositivo Termux",
+                "banner": banner if banner else "Termux OpenSSH"
+            })
+
+    # Filtrar la propia IP del móvil
+    return [s for s in servers if s["ip"] != my_ip]
+
+def main():
+    print(f"{C_CYAN}╭──────────────────────────────────────────────────────────────╮{C_RESET}")
+    print(f"{C_CYAN}│     ⚡  SSH-FINDER: DETECTOR AUTOMÁTICO DE TU PC POR WI-FI   │{C_RESET}")
+    print(f"{C_CYAN}╰──────────────────────────────────────────────────────────────╯{C_RESET}")
+
+    servers = scan_ssh_servers()
+
+    if not servers:
+        print(f"\n{C_RED}❌ No se encontraron servidores SSH abiertos en tu red.{C_RESET}")
+        print(f"{C_YELLOW}💡 Tip: Asegúrate de que el servicio SSH de tu PC esté corriendo (`sudo systemctl start ssh`).{C_RESET}\n")
+        sys.exit(0)
+
+    print(f"\n{C_GREEN}🖥️  Servidores SSH Encontrados en tu Wi-Fi:{C_RESET}\n")
+
+    for idx, s in enumerate(servers, 1):
+        print(f"  {C_CYAN}[{idx}]{C_RESET} {C_BOLD}{C_GREEN}IP:{C_RESET} {C_WHITE}{s['ip']}{C_RESET} {C_YELLOW}(Puerto {s['port']}){C_RESET}")
+        print(f"      🏷️  Tipo: {C_WHITE}{s['type']}{C_RESET} | Host: {C_DIM}{s['hostname']}{C_RESET} | {C_DIM}{s['banner']}{C_RESET}\n")
+
+    # Si se pasa --connect o simplemente para seleccionar
+    if len(servers) == 1:
+        target_ip = servers[0]["ip"]
+        target_port = servers[0]["port"]
+        print(f"{C_GREEN}👉 Se detectó tu PC automáticamente en:{C_RESET} {C_BOLD}{C_YELLOW}{target_ip}:{target_port}{C_RESET}")
+        choice = input(f"\n{C_WHITE}¿Deseas conectarte ahora por SSH? [S/n]:{C_RESET} ").strip().lower()
+        if choice in ["", "s", "si", "y", "yes"]:
+            user = input(f"{C_WHITE}👤 Usuario de la PC [Enter para 'rootkit']:{C_RESET} ").strip()
+            if not user:
+                user = "rootkit"
+            print(f"\n{C_BLUE}🔗 Conectando a {user}@{target_ip}...{C_RESET}\n")
+            if target_port == 22:
+                os.system(f"ssh {user}@{target_ip}")
+            else:
+                os.system(f"ssh -p {target_port} {user}@{target_ip}")
+    else:
+        choice = input(f"{C_GREEN}👉 Selecciona el número de tu PC para conectar [1-{len(servers)} o Enter para salir]:{C_RESET} ").strip()
+        if choice.isdigit() and 1 <= int(choice) <= len(servers):
+            target = servers[int(choice) - 1]
+            user = input(f"{C_WHITE}👤 Usuario de la PC [Enter para 'rootkit']:{C_RESET} ").strip()
+            if not user:
+                user = "rootkit"
+            print(f"\n{C_BLUE}🔗 Conectando a {user}@{target['ip']}...{C_RESET}\n")
+            if target['port'] == 22:
+                os.system(f"ssh {user}@{target['ip']}")
+            else:
+                os.system(f"ssh -p {target['port']} {user}@{target['ip']}")
+
+if __name__ == "__main__":
+    main()
+SSH_EOF
+    chmod +x "$HOME_DIR/ssh-finder.py"
+    ln -sf "$HOME_DIR/ssh-finder.py" "$PREFIX/bin/ssh-find"
+    ln -sf "$HOME_DIR/ssh-finder.py" "$PREFIX/bin/ssh-pc"
+    ln -sf "$HOME_DIR/ssh-finder.py" "$PREFIX/bin/findpc"
+    ok "Detector automático SSH para tu PC instalado (Comando: ssh-find / ssh-pc / findpc) ⚡"
+
     # CLI-Inbox (Gestor de Gmail en Python moderno con TUI)
     if [ ! -d "$HOME_DIR/.local/share/CLI-Inbox" ]; then
         log 8.05 "Instalando CLI-Inbox (Gestor de correo Gmail para terminal)..."

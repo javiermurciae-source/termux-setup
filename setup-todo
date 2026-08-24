@@ -363,6 +363,7 @@ CONFIG_FILE = os.path.expanduser("~/.config/mail_accounts.json")
 IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
 
+# Paleta de Colores ANSI Moderna
 C_CYAN = "\033[1;36m"
 C_BLUE = "\033[1;34m"
 C_GREEN = "\033[1;32m"
@@ -374,10 +375,11 @@ C_DIM = "\033[2;37m"
 C_UNDERLINE = "\033[4m"
 C_RESET = "\033[0m"
 
+# Resaltado limpio y brillante para enlaces clickeables en Termux
 C_URL = f"{C_CYAN}{C_UNDERLINE}"
 
 def highlight_urls(text):
-    url_pattern = r'(https?://[^\s<>"\']+)'
+    url_pattern = r'(https?://[^\s<>"\'\)]+)'
     return re.sub(url_pattern, f"{C_URL}\\1{C_RESET}", text)
 
 def load_accounts():
@@ -510,8 +512,6 @@ try:
                     if payload:
                         body = payload.decode(errors="ignore")
 
-                extracted_urls = re.findall(r'(https?://[^\s<>"\'\)]+)', body)
-
                 print(f"{C_CYAN}┌─────────────────────────────────────────────────────────────┐{C_RESET}")
                 print(f"{C_CYAN}│{C_RESET} {C_YELLOW}👤 De:{C_RESET}      {C_WHITE}{sender}{C_RESET}")
                 print(f"{C_CYAN}│{C_RESET} {C_BLUE}📅 Fecha:{C_RESET}   {C_DIM}{date_str}{C_RESET}")
@@ -521,15 +521,6 @@ try:
                 for line in body.strip().splitlines():
                     colored_line = highlight_urls(line)
                     print(f"{C_CYAN}│{C_RESET}   {colored_line}")
-
-                if extracted_urls:
-                    print(f"{C_CYAN}├─────────────────────────────────────────────────────────────┤{C_RESET}")
-                    print(f"{C_CYAN}│{C_RESET} {C_YELLOW}🔗 Enlaces Detectados en este Correo:{C_RESET}")
-                    seen = set()
-                    unique_urls = [x for x in extracted_urls if not (x in seen or seen.add(x))]
-                    for u_idx, u in enumerate(unique_urls[:5], 1):
-                        print(f"{C_CYAN}│{C_RESET}   {C_YELLOW}[{u_idx}]{C_RESET} {C_CYAN}{C_UNDERLINE}{u}{C_RESET}")
-
                 print(f"{C_CYAN}└─────────────────────────────────────────────────────────────┘{C_RESET}\n")
 
     mail.logout()

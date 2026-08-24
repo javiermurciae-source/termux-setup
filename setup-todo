@@ -133,7 +133,7 @@ step_fish_config() {
     FISH_CFG="$HOME_DIR/.config/fish/config.fish"
     if [ -f "$FISH_CFG" ]; then
         # Limpiar cualquier arreglo anterior nuestro usando un bloque seguro
-        sed -i '/# INICIO_SALUDO_AGY/,/# FIN_SALUDO_AGY/d' "$FISH_CFG" 2>/dev/null
+        sed -i '/# INICIO_SALUDO_AGY/,/# FIN_SALUDO_AGY/d' "$FISH_CFG"
         
         cat >> "$FISH_CFG" << 'FISH_GREETING'
 
@@ -180,11 +180,11 @@ PERSONAL_FISH
     ok "Alias y rutas de sistema sincronizados (personal.fish)"
 
 
-    ln -sf "$PREFIX/bin/fish" "$HOME_DIR/.termux/shell" 2>/dev/null
+    ln -sf "$PREFIX/bin/fish" "$HOME_DIR/.termux/shell"
     
     # Eliminar mensaje de bienvenida (MOTD) de Termux
     touch "$HOME_DIR/.hushlogin"
-    rm -f "$PREFIX/etc/motd" 2>/dev/null
+    rm -f "$PREFIX/etc/motd"
     
     ok "Fish → shell predeterminado (Mensaje de bienvenida ocultado)"
 }
@@ -207,7 +207,8 @@ EOF
     
     # 2. Configurar tamaños de la interfaz (Preferences XML)
     PREFS="/data/data/com.termux/shared_prefs/com.termux_preferences.xml"
-    if [ -f "$PREFS" ] && command -v python >/dev/null 2>&1; then
+    if command -v python >/dev/null 2>&1; then
+        mkdir -p "/data/data/com.termux/shared_prefs"
         python -c "
 import xml.etree.ElementTree as ET
 import os
@@ -216,26 +217,29 @@ prefs = '$PREFS'
 if os.path.exists(prefs):
     tree = ET.parse(prefs)
     root = tree.getroot()
+else:
+    root = ET.Element('map')
+    tree = ET.ElementTree(root)
     
-    def set_val(tag, name, val):
-        for elem in root.findall(tag):
-            if elem.get('name') == name:
-                elem.set('value', val)
-                return
-        new_elem = ET.SubElement(root, tag)
-        new_elem.set('name', name)
-        new_elem.set('value', val)
-        
-    set_val('float', 'in_app_keyboard_height_scale', '0.709')
-    set_val('float', 'in_app_keyboard_key_margin_scale', '2.96')
-    set_val('int', 'in_app_keyboard_horizontal_inset', '13')
-    set_val('float', 'in_app_keyboard_key_corner_radius_dp', '2.7')
-    set_val('float', 'app_launcher_bar_height', '1.72')
-    pinned_apps = '{"schemaVersion":5,"items":[{"type":"app","packageName":"com.whatsapp","activityName":"com.whatsapp.Main"},{"type":"app","packageName":"com.brave.browser","activityName":"com.google.android.apps.chrome.Main"},{"type":"app","packageName":"com.transsion.camera","activityName":"com.android.camera.CameraLauncher"},{"type":"app","packageName":"com.openai.chatgpt","activityName":"com.openai.chatgpt.MainActivity"},{"type":"app","packageName":"com.google.android.gm","activityName":"com.google.android.gm.ConversationListActivityGmail"},{"type":"app","packageName":"com.nequi.MobileApp","activityName":"com.nequi.MobileApp.MainActivity"},{"type":"app","packageName":"me.bmax.apatch","activityName":"me.bmax.apatch.ui.MainActivity"},{"type":"app","packageName":"com.binance.dev","activityName":"com.eaas.launcher.activities.main.MainActivity"},{"type":"app","packageName":"com.discord","activityName":"com.discord.main.MainDefault"},{"type":"app","packageName":"com.google.android.dialer","activityName":"com.google.android.dialer.extensions.GoogleDialtactsActivity"},{"type":"app","packageName":"com.google.android.apps.youtube.music","activityName":"com.google.android.apps.youtube.music.activities.MusicActivity"},{"type":"app","packageName":"com.pinterest","activityName":"com.pinterest.activity.PinterestActivity"}],"folders":[],"appIconOverrides":[]}'
-    set_val('string', 'app_launcher_pinned_items_v2', pinned_apps)
+def set_val(tag, name, val):
+    for elem in root.findall(tag):
+        if elem.get('name') == name:
+            elem.set('value', val)
+            return
+    new_elem = ET.SubElement(root, tag)
+    new_elem.set('name', name)
+    new_elem.set('value', val)
     
-    tree.write(prefs, encoding='utf-8', xml_declaration=True)
-" 2>/dev/null
+set_val('float', 'in_app_keyboard_height_scale', '0.709')
+set_val('float', 'in_app_keyboard_key_margin_scale', '2.96')
+set_val('int', 'in_app_keyboard_horizontal_inset', '13')
+set_val('float', 'in_app_keyboard_key_corner_radius_dp', '2.7')
+set_val('float', 'app_launcher_bar_height', '1.72')
+pinned_apps = '{"schemaVersion":5,"items":[{"type":"app","packageName":"com.whatsapp","activityName":"com.whatsapp.Main"},{"type":"app","packageName":"com.brave.browser","activityName":"com.google.android.apps.chrome.Main"},{"type":"app","packageName":"com.transsion.camera","activityName":"com.android.camera.CameraLauncher"},{"type":"app","packageName":"com.openai.chatgpt","activityName":"com.openai.chatgpt.MainActivity"},{"type":"app","packageName":"com.google.android.gm","activityName":"com.google.android.gm.ConversationListActivityGmail"},{"type":"app","packageName":"com.nequi.MobileApp","activityName":"com.nequi.MobileApp.MainActivity"},{"type":"app","packageName":"me.bmax.apatch","activityName":"me.bmax.apatch.ui.MainActivity"},{"type":"app","packageName":"com.binance.dev","activityName":"com.eaas.launcher.activities.main.MainActivity"},{"type":"app","packageName":"com.discord","activityName":"com.discord.main.MainDefault"},{"type":"app","packageName":"com.google.android.dialer","activityName":"com.google.android.dialer.extensions.GoogleDialtactsActivity"},{"type":"app","packageName":"com.google.android.apps.youtube.music","activityName":"com.google.android.apps.youtube.music.activities.MusicActivity"},{"type":"app","packageName":"com.pinterest","activityName":"com.pinterest.activity.PinterestActivity"}],"folders":[],"appIconOverrides":[]}'
+set_val('string', 'app_launcher_pinned_items_v2', pinned_apps)
+
+tree.write(prefs, encoding='utf-8', xml_declaration=True)
+"
     fi
     
     ok "Teclado e interfaz sincronizados (Tamaños personalizados aplicados) 🎛️"
@@ -324,7 +328,7 @@ step_recon_scraping() {
         warn "Compilando Ffuf en Go (Esto puede tardar un par de minutos)..."
         warn "Compilando Ffuf (Go)..."
         go install -v github.com/ffuf/ffuf/v2@latest
-        ln -sf "$GOPATH/bin/ffuf" "$PREFIX/bin/ffuf" 2>/dev/null
+        ln -sf "$GOPATH/bin/ffuf" "$PREFIX/bin/ffuf"
         ok "Ffuf (Fuzzer ultrarrápido) instalado 🚀"
     else
         ok "Ffuf ya está instalado. ¡Omitiendo! ⚡"
@@ -387,7 +391,7 @@ touch "$FLAG"
 
 clear
 echo ""
-cowsay "Todo listo. Reinicia la terminal." 2>/dev/null \
+cowsay "Todo listo. Reinicia la terminal." \
     || printf '  \e[1;32m✅  Todo listo. Reinicia la terminal.\e[0m\n'
 echo ""
 printf '  \e[34m🐟 Shell:\e[0m       Fish (default)\n'
@@ -405,4 +409,5 @@ echo ""
 printf '  \e[1;31mCerrando Termux en 3 segundos para aplicar los cambios...\e[0m\n'
 sleep 3
 # Mata el proceso padre (Termux) para que la app se cierre sola
+termux-reload-settings
 kill -9 $PPID

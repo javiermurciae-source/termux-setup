@@ -24,7 +24,8 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
 * 🔑 **`codc` / `verificar-cod.sh`:** Extractor automatizado de códigos 2FA/OTP por IMAP.
 * 📦 **`inbox` (CLI-Inbox):** Cliente completo de Gmail para terminal basado en Rich y Prompt Toolkit.
 
-### 🕵️ 3. Reconocimiento Web, Fuzzing & Scraping
+### 🕵️ 3. Reconocimiento de Red, Fuzzing & Scraping
+* 🌐 **`netscan` (o `lan-scan`):** Escáner interactivo de red local que lista **todas las IPs conectadas al Wi-Fi, direcciones MAC, puertas de enlace (Router) y marcas/fabricantes** con tabla ANSI formateada.
 * 🔍 **WhatWeb:** Escáner avanzado de tecnologías y huellas de servidores web.
 * 🕸️ **Web Scraping:** Python `requests`, `beautifulsoup4` y `html2text`.
 * 💣 **Fuzzing (Opcional interactivo):**

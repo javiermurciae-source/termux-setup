@@ -795,6 +795,209 @@ chmod +x "$HOME_DIR/leer-correo.sh"
         fi
     fi
 
+    # Script utilitario: Escáner de Red Local y Dispositivos Conectados (IPs, MACs, Fabricante)
+    cat << 'SCAN_EOF' > "$HOME_DIR/netscan.py"
+#!/data/data/com.termux/files/usr/bin/python3
+"""
+🌐 NETSCAN CLI - Escáner de Red Local (IPs, MACs, Fabricantes y Hostnames)
+Usa arp, nmap y /proc/net/arp para listar todos los dispositivos conectados a tu Wi-Fi.
+"""
+
+import subprocess
+import os
+import sys
+import re
+import socket
+
+# Paleta de Colores ANSI
+C_CYAN = "\033[1;36m"
+C_BLUE = "\033[1;34m"
+C_GREEN = "\033[1;32m"
+C_YELLOW = "\033[1;33m"
+C_MAGENTA = "\033[1;35m"
+C_RED = "\033[1;31m"
+C_WHITE = "\033[1;37m"
+C_DIM = "\033[2;37m"
+C_BOLD = "\033[1m"
+C_RESET = "\033[0m"
+
+def get_local_ip_and_subnet():
+    """Obtiene la IP local del dispositivo en la interfaz Wi-Fi wlan0"""
+    try:
+        # Intentar obtener IP de wlan0
+        res = subprocess.run(["ip", "-o", "-4", "addr", "show", "wlan0"], capture_output=True, text=True)
+        if res.returncode == 0 and res.stdout:
+            match = re.search(r'inet\s+(\d+\.\d+\.\d+\.\d+)/(\d+)', res.stdout)
+            if match:
+                return match.group(1), match.group(2)
+    except Exception:
+        pass
+
+    # Fallback con socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip, "24"
+    except Exception:
+        return "192.168.1.1", "24"
+
+def get_vendor(mac):
+    """Identifica el fabricante por los primeros 3 octetos de la MAC"""
+    mac_clean = mac.upper().replace(":", "")[:6]
+    vendors = {
+        "001A11": "Google",
+        "D83BD0": "Apple",
+        "F01898": "Apple",
+        "3C5AB4": "Samsung",
+        "BC926B": "Xiaomi",
+        "50284A": "Huawei",
+        "342EB6": "Infinix / Transsion",
+        "687251": "Infinix / Tecno",
+        "D0039B": "TP-Link",
+        "50C7BF": "TP-Link",
+        "C04A00": "TP-Link",
+        "E4C32A": "Espressif (ESP8266/ESP32)",
+        "240AC4": "Espressif IoT",
+        "001788": "Philips Lighting",
+        "B827EB": "Raspberry Pi",
+        "DCA632": "Raspberry Pi",
+        "E45F01": "Raspberry Pi",
+        "AC84C6": "Intel",
+        "3887D5": "Amazon Technologies",
+        "68545A": "Amazon FireTV/Echo"
+    }
+    return vendors.get(mac_clean, "Dispositivo de Red")
+
+def scan_network(ip, cidr):
+    subnet = ".".join(ip.split(".")[:3]) + ".0/" + cidr
+    print(f"\n{C_BLUE}🔍 Escaneando la subred {C_WHITE}{subnet}{C_BLUE} en la interfaz Wi-Fi...{C_RESET}")
+
+    # Ejecutar escaneo rápido de descubrimiento (Ping Sweep con Nmap)
+    cmd = ["nmap", "-sn", "-PR", "--min-rate", "100", subnet]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=25)
+        nmap_output = res.stdout
+    except Exception:
+        nmap_output = ""
+
+    # Parsear resultados de /proc/net/arp y nmap
+    devices = []
+    
+    # 1. Leer ARP Cache del Kernel
+    try:
+        with open("/proc/net/arp", "r") as f:
+            for line in f.readlines()[1:]:
+                parts = line.split()
+                if len(parts) >= 6:
+                    dev_ip = parts[0]
+                    dev_mac = parts[3]
+                    if dev_mac != "00:00:00:00:00:00":
+                        devices.append({
+                            "ip": dev_ip,
+                            "mac": dev_mac.upper(),
+                            "name": "Desconocido",
+                            "vendor": get_vendor(dev_mac)
+                        })
+    except Exception:
+        pass
+
+    # 2. Enriquecer con la salida de Nmap si está disponible
+    current_ip = None
+    current_name = None
+    for line in nmap_output.splitlines():
+        if "Nmap scan report for" in line:
+            parts = line.replace("Nmap scan report for", "").strip().split()
+            if len(parts) == 1:
+                current_ip = parts[0].strip("()")
+                current_name = "Dispositivo"
+            elif len(parts) >= 2:
+                current_name = parts[0]
+                current_ip = parts[1].strip("()")
+        elif "MAC Address:" in line and current_ip:
+            match = re.search(r'MAC Address:\s+([0-9A-Fa-f:]+)\s*\((.*?)\)', line)
+            if match:
+                mac_addr = match.group(1).upper()
+                vendor_name = match.group(2)
+                # Actualizar o agregar
+                found = False
+                for d in devices:
+                    if d["ip"] == current_ip:
+                        d["mac"] = mac_addr
+                        d["vendor"] = vendor_name
+                        d["name"] = current_name if current_name != "Dispositivo" else d["name"]
+                        found = True
+                        break
+                if not found:
+                    devices.append({
+                        "ip": current_ip,
+                        "mac": mac_addr,
+                        "name": current_name,
+                        "vendor": vendor_name
+                    })
+
+    # Asegurar que la propia IP del teléfono esté presente
+    if not any(d["ip"] == ip for d in devices):
+        devices.append({
+            "ip": ip,
+            "mac": "Tu Dispositivo",
+            "name": "Este Teléfono (Infinix)",
+            "vendor": "Transsion / Host"
+        })
+
+    # Ordenar por IP numérica
+    def ip_key(dev):
+        try:
+            return [int(x) for x in dev["ip"].split(".")]
+        except Exception:
+            return [0, 0, 0, 0]
+
+    devices.sort(key=ip_key)
+    return devices
+
+def main():
+    print(f"{C_CYAN}╭───────────────────────────────────────────────────────────────╮{C_RESET}")
+    print(f"{C_CYAN}│     🌐  ESCÁNER DE DISPOSITIVOS EN RED WI-FI (NETSCAN)  ⚡     │{C_RESET}")
+    print(f"{C_CYAN}╰───────────────────────────────────────────────────────────────╯{C_RESET}")
+
+    local_ip, cidr = get_local_ip_and_subnet()
+    print(f"{C_YELLOW}📍 Tu IP Local:{C_RESET} {C_WHITE}{local_ip}/{cidr}{C_RESET}")
+
+    devices = scan_network(local_ip, cidr)
+
+    print(f"\n{C_GREEN}📡 Dispositivos Encontrados en tu Red ({len(devices)} Activos):{C_RESET}\n")
+
+    print(f"{C_CYAN}┌─────────────────┬───────────────────┬────────────────────────────────┐{C_RESET}")
+    print(f"{C_CYAN}│{C_RESET} {C_BOLD}{'DIRECCIÓN IP':<15}{C_RESET} {C_CYAN}│{C_RESET} {C_BOLD}{'DIRECCIÓN MAC':<17}{C_RESET} {C_CYAN}│{C_RESET} {C_BOLD}{'FABRICANTE / TIPO':<30}{C_RESET} {C_CYAN}│{C_RESET}")
+    print(f"{C_CYAN}├─────────────────┼───────────────────┼────────────────────────────────┤{C_RESET}")
+
+    for d in devices:
+        ip_str = d["ip"]
+        mac_str = d["mac"]
+        vendor_str = d["vendor"][:30]
+        
+        # Resaltar si es la puerta de enlace (router) o el propio móvil
+        if ip_str.endswith(".1"):
+            role_tag = f"{C_MAGENTA}🌐 Router (Gateway){C_RESET}"
+            print(f"{C_CYAN}│{C_RESET} {C_YELLOW}{ip_str:<15}{C_RESET} {C_CYAN}│{C_RESET} {C_WHITE}{mac_str:<17}{C_RESET} {C_CYAN}│{C_RESET} {role_tag:<39} {C_CYAN}│{C_RESET}")
+        elif ip_str == local_ip:
+            role_tag = f"{C_GREEN}📱 Tú (Este Móvil){C_RESET}"
+            print(f"{C_CYAN}│{C_RESET} {C_GREEN}{ip_str:<15}{C_RESET} {C_CYAN}│{C_RESET} {C_WHITE}{mac_str:<17}{C_RESET} {C_CYAN}│{C_RESET} {role_tag:<39} {C_CYAN}│{C_RESET}")
+        else:
+            print(f"{C_CYAN}│{C_RESET} {C_WHITE}{ip_str:<15}{C_RESET} {C_CYAN}│{C_RESET} {C_DIM}{mac_str:<17}{C_RESET} {C_CYAN}│{C_RESET} {C_WHITE}{vendor_str:<30}{C_RESET} {C_CYAN}│{C_RESET}")
+
+    print(f"{C_CYAN}└─────────────────┴───────────────────┴────────────────────────────────┘{C_RESET}\n")
+
+if __name__ == "__main__":
+    main()
+SCAN_EOF
+    chmod +x "$HOME_DIR/netscan.py"
+    ln -sf "$HOME_DIR/netscan.py" "$PREFIX/bin/netscan"
+    ln -sf "$HOME_DIR/netscan.py" "$PREFIX/bin/wpscan-net"
+    ln -sf "$HOME_DIR/netscan.py" "$PREFIX/bin/lan-scan"
+    ok "Escáner de red local instalado (Comando: netscan / lan-scan) 🌐"
+
     # CLI-Inbox (Gestor de Gmail en Python moderno con TUI)
     if [ ! -d "$HOME_DIR/.local/share/CLI-Inbox" ]; then
         log 8.05 "Instalando CLI-Inbox (Gestor de correo Gmail para terminal)..."

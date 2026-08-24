@@ -327,12 +327,10 @@ step_core_termux() {
 #!/data/data/com.termux/files/usr/bin/python3
 """
 🎙️ OPENCODE VOICE & CONTEXT SUITE (Termux AI Agent)
-Integra:
-- Dictado por voz (teclado / entrada directa)
-- Text-to-Speech (TTS) nativo Android/Termux
-- Portapapeles dinámico (Clipboard)
-- Contexto vivo de scripts, logs, batería y entorno
-- Ejecución directa en OpenCode vía `opencode --prompt` / `opencode run`
+Soporta:
+- OpenCode / Antigravity / KiloCode / Qwen
+- Selección automática de proveedor/modelo AI
+- Dictado por voz, TTS, Clipboard y Contexto del sistema
 """
 
 import subprocess
@@ -416,6 +414,11 @@ def main():
         print(f"  {C_DIM}• {line}{C_RESET}")
     print()
 
+    # Si se pasa --auth o --providers
+    if "--auth" in sys.argv or "auth" in sys.argv or "--providers" in sys.argv:
+        os.system("opencode auth")
+        sys.exit(0)
+
     print(f"{C_YELLOW}🎤 Toca el icono de micrófono en tu teclado para dictar,{C_RESET}")
     print(f"{C_YELLOW}   o escribe tu instrucción directamente:{C_RESET}\n")
 
@@ -432,7 +435,6 @@ def main():
     print(f"\n{C_BLUE}🤖 Iniciando OpenCode con tu prompt y contexto...{C_RESET}\n")
     speak("Iniciando OpenCode")
 
-    # Ejecución correcta con --prompt
     opencode_bin = "/data/data/com.termux/files/usr/bin/opencode"
     if os.path.exists(opencode_bin):
         cmd = [opencode_bin, "--prompt", full_prompt]

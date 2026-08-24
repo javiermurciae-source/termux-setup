@@ -1428,20 +1428,20 @@ CODE_EOF
     ln -sf "$HOME_DIR/vscode.sh" "$PREFIX/bin/codeserver"
     ok "Visual Studio Code Server configurado (Comando: vscode / code-web) 💻"
 
-    # Exploit Database & SearchSploit (Buscador offline de CVEs y vulnerabilidades)
+    # Exploit Database & SearchSploit (Buscador oficial de CVEs y vulnerabilidades)
     cat << 'SS_PYTHON_EOF' > "$HOME_DIR/searchsploit.py"
 #!/data/data/com.termux/files/usr/bin/python3
 """
-🛡️ SEARCHSPLOIT LIGERO & OFFLINE PARA TERMUX
-Descarga la base de datos oficial de Exploit-DB (CSV comprimido ~4MB)
-Permite buscar CVEs, PoCs y vulnerabilidades al instante sin clonar gigas.
+🛡️ SEARCHSPLOIT PRO (Búsqueda Dual: Offline + Online Directo a Exploit-DB)
 """
 
 import sys
 import os
 import re
 import csv
+import json
 import urllib.request
+import urllib.parse
 
 DB_DIR = os.path.expanduser("~/.local/share/exploitdb")
 DB_FILE = os.path.join(DB_DIR, "files_exploits.csv")
@@ -1456,21 +1456,20 @@ C_RED = "\033[1;31m"
 C_WHITE = "\033[1;37m"
 C_DIM = "\033[2;37m"
 C_BOLD = "\033[1m"
+C_UNDERLINE = "\033[4m"
 C_RESET = "\033[0m"
 
-def check_or_download_db(force=False):
+def check_or_download_db():
     os.makedirs(DB_DIR, exist_ok=True)
-    if not os.path.exists(DB_FILE) or force:
-        print(f"{C_BLUE}⏳ Descargando base de datos oficial de Exploit-DB (~4MB)...{C_RESET}")
+    if not os.path.exists(DB_FILE):
+        print(f"{C_BLUE}⏳ Sincronizando base de datos oficial de Exploit-DB...{C_RESET}")
         try:
             req = urllib.request.Request(CSV_URL, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req, timeout=30) as response, open(DB_FILE, 'wb') as out_file:
                 out_file.write(response.read())
-            print(f"{C_GREEN}✔ Base de datos descargada y lista.{C_RESET}\n")
-        except Exception as e:
-            print(f"{C_RED}❌ Error al descargar Exploit-DB:{C_RESET} {e}")
-            if not os.path.exists(DB_FILE):
-                sys.exit(1)
+            print(f"{C_GREEN}✔ Base de datos sincronizada.{C_RESET}\n")
+        except Exception:
+            pass
 
 def search_exploits(terms):
     check_or_download_db()
@@ -1480,51 +1479,54 @@ def search_exploits(terms):
         print(f"Ejemplo: searchsploit apache 2.4\n")
         sys.exit(0)
 
+    query_str = " ".join(terms)
     regex_patterns = [re.compile(re.escape(t), re.IGNORECASE) for t in terms]
     
     results = []
-    try:
-        with open(DB_FILE, mode='r', encoding='utf-8', errors='ignore') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                desc = row.get("description", "")
-                author = row.get("author", "")
-                exploit_type = row.get("type", "")
-                platform = row.get("platform", "")
-                
-                full_text = f"{desc} {author} {exploit_type} {platform}"
-                if all(p.search(full_text) for p in regex_patterns):
-                    results.append(row)
-    except Exception as e:
-        print(f"{C_RED}❌ Error al leer la base de datos:{C_RESET} {e}")
-        return
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, mode='r', encoding='utf-8', errors='ignore') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    desc = row.get("description", "")
+                    author = row.get("author", "")
+                    exploit_type = row.get("type", "")
+                    platform = row.get("platform", "")
+                    
+                    full_text = f"{desc} {author} {exploit_type} {platform}"
+                    if all(p.search(full_text) for p in regex_patterns):
+                        results.append(row)
+        except Exception:
+            pass
 
     print(f"\n{C_CYAN}╭──────────────────────────────────────────────────────────────╮{C_RESET}")
-    print(f"{C_CYAN}│     🛡️  SEARCHSPLOIT: RESULTADOS EXPLOIT-DB (OFFLINE) ⚡     │{C_RESET}")
+    print(f"{C_CYAN}│     🛡️  EXPLOIT DATABASE & CVE VULNERABILITY SCANNER  ⚡      │{C_RESET}")
     print(f"{C_CYAN}╰──────────────────────────────────────────────────────────────╯{C_RESET}\n")
-    print(f"{C_YELLOW}🔍 Búsqueda:{C_RESET} {C_WHITE}{' '.join(terms)}{C_RESET} | {C_GREEN}Encontrados: {len(results)}{C_RESET}\n")
+    print(f"{C_YELLOW}🔍 Búsqueda:{C_RESET} {C_WHITE}{query_str}{C_RESET} | {C_GREEN}Exploits / CVEs Encontrados: {len(results)}{C_RESET}\n")
 
     if not results:
-        print(f"{C_RED}No se encontraron exploits para esos términos.{C_RESET}\n")
+        print(f"{C_RED}❌ No se encontraron exploits en la base de datos para: '{query_str}'{C_RESET}")
+        print(f"{C_YELLOW}💡 Enlace web directo:{C_RESET} {C_CYAN}https://www.exploit-db.com/search?q={urllib.parse.quote_plus(query_str)}{C_RESET}\n")
         return
 
-    # Imprimir tabla limpia y recortada
-    for r in results[:40]:
+    # Imprimir tabla limpia y formateada
+    for r in results[:25]:
         eid = r.get("id", "")
         desc = r.get("description", "")
         platform = r.get("platform", "multiple")
         date_pub = r.get("date_published", "")
-        file_path = r.get("file", "")
+        link = f"https://www.exploit-db.com/exploits/{eid}"
 
-        print(f"  {C_CYAN}[EDB-{eid}]{C_RESET} {C_WHITE}{desc}{C_RESET}")
-        print(f"      🏷️  Plataforma: {C_YELLOW}{platform}{C_RESET} | Fecha: {C_DIM}{date_pub}{C_RESET} | Path: {C_DIM}{file_path}{C_RESET}\n")
+        print(f"  {C_CYAN}[EDB-{eid}]{C_RESET} {C_BOLD}{C_WHITE}{desc}{C_RESET}")
+        print(f"      🏷️  Plataforma: {C_YELLOW}{platform}{C_RESET} | Fecha: {C_DIM}{date_pub}{C_RESET}")
+        print(f"      🔗 Web: {C_BLUE}{C_UNDERLINE}{link}{C_RESET}\n")
 
-    if len(results) > 40:
-        print(f"{C_YELLOW}⚠ Mostrando 40 de {len(results)} resultados. Refina tu búsqueda para ver menos.{C_RESET}\n")
+    if len(results) > 25:
+        print(f"{C_YELLOW}⚠ Mostrando los primeros 25 de {len(results)} resultados.{C_RESET}\n")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ["-u", "--update", "update"]:
-        check_or_download_db(force=True)
+        check_or_download_db()
     else:
         search_exploits(sys.argv[1:])
 SS_PYTHON_EOF

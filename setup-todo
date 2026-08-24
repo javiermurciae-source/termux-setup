@@ -350,57 +350,79 @@ step_recon_scraping() {
     # Script utilitario: Extractor de Códigos/OTP por IMAP (Gmail / Dominio propio)
     cat << 'OTP_EOF' > "$HOME_DIR/leer-correo.sh"
 #!/data/data/com.termux/files/usr/bin/bash
-# Lector puro y directo de correos por IMAP
+# Lector puro e interactivo de correos por IMAP
 python - << 'PYEOF'
 import imaplib
 import email
 from email.header import decode_header
-import re
-import os
 import getpass
+import sys
 
-# Configuración (Puedes definir variables de entorno o ingresar al momento)
-EMAIL_USER = os.getenv("IMAP_USER")
-EMAIL_PASS = os.getenv("IMAP_PASS")
-IMAP_SERVER = os.getenv("IMAP_SERVER", "imap.gmail.com")
+print("[1;36m" + "="*50)
+print("       📬 LECTOR INTERACTIVO DE CORREO (IMAP) 📬")
+print("="*50 + "[0m
+")
 
-if not EMAIL_USER:
-    EMAIL_USER = input("📧 Correo (ej: contacto@tudominio.com o user@gmail.com): ")
-if not EMAIL_PASS:
-    EMAIL_PASS = getpass.getpass("🔑 Contraseña de aplicación (16 letras): ")
+# 1. Servidor IMAP
+server_input = input("🌐 Servidor IMAP [Enter para imap.gmail.com]: ").strip()
+IMAP_SERVER = server_input if server_input else "imap.gmail.com"
+
+# 2. Puerto IMAP
+port_input = input("🔌 Puerto SSL [Enter para 993]: ").strip()
+IMAP_PORT = int(port_input) if port_input.isdigit() else 993
+
+# 3. Correo Electrónico
+EMAIL_USER = input("📧 Correo electrónico completo (ej: tu@dominio.com / user@gmail.com): ").strip()
+while not EMAIL_USER:
+    EMAIL_USER = input("[1;31m⚠️ El correo es obligatorio:[0m ").strip()
+
+# 4. Contraseña
+EMAIL_PASS = getpass.getpass("🔑 Contraseña o App Password: ").strip()
+while not EMAIL_PASS:
+    EMAIL_PASS = getpass.getpass("[1;31m⚠️ La contraseña es obligatoria:[0m ").strip()
+
+# 5. Cantidad de correos a leer
+count_input = input("🔢 ¿Cuántos correos recientes deseas leer? [Enter para 3]: ").strip()
+COUNT = int(count_input) if count_input.isdigit() and int(count_input) > 0 else 3
 
 try:
-    print(f"\n⏳ Conectando a {IMAP_SERVER}...")
-    mail = imaplib.IMAP4_SSL(IMAP_SERVER)
+    print(f"
+⏳ Conectando a {IMAP_SERVER}:{IMAP_PORT} como {EMAIL_USER}...")
+    mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
     mail.login(EMAIL_USER, EMAIL_PASS)
     mail.select("inbox")
 
-    # Buscar los últimos 5 correos
     status, messages = mail.search(None, "ALL")
     if status != "OK" or not messages[0]:
-        print("📭 No hay correos en la bandeja de entrada.")
+        print("[1;33m📭 La bandeja de entrada está vacía.[0m")
         mail.logout()
-        exit(0)
+        sys.exit(0)
 
     mail_ids = messages[0].split()
-    latest_ids = mail_ids[-5:] # Últimos 5
+    latest_ids = mail_ids[-COUNT:]
 
-    print("\n📩 --- ÚLTIMOS CORREOS RECIBIDOS (IMAP) --- 📩\n")
+    print(f"
+[1;32m📩 Mostrando los últimos {len(latest_ids)} correos recibidos:[0m
+")
+    print("=" * 60)
+
     for mail_id in reversed(latest_ids):
         res, msg_data = mail.fetch(mail_id, "(RFC822)")
         for response_part in msg_data:
             if isinstance(response_part, tuple):
                 msg = email.message_from_bytes(response_part[1])
                 
-                # Asunto
-                subject, encoding = decode_header(msg["Subject"])[0]
+                # Decodificar Asunto
+                raw_subject = msg.get("Subject", "(Sin Asunto)")
+                subject, encoding = decode_header(raw_subject)[0]
                 if isinstance(subject, bytes):
                     subject = subject.decode(encoding if encoding else "utf-8", errors="ignore")
                 
-                # Remitente
-                sender = msg.get("From")
+                # Remitente y Fecha
+                sender = msg.get("From", "(Desconocido)")
+                date_str = msg.get("Date", "")
 
-                # Cuerpo del mensaje
+                # Extraer cuerpo del correo
                 body = ""
                 if msg.is_multipart():
                     for part in msg.walk():
@@ -411,20 +433,33 @@ try:
                             if payload:
                                 body = payload.decode(errors="ignore")
                                 break
+                    if not body:
+                        for part in msg.walk():
+                            if part.get_content_type() == "text/html":
+                                payload = part.get_payload(decode=True)
+                                if payload:
+                                    body = payload.decode(errors="ignore")
+                                    break
                 else:
                     payload = msg.get_payload(decode=True)
                     if payload:
                         body = payload.decode(errors="ignore")
 
-                print(f"🔸 De: {sender}")
-                print(f"🔹 Asunto: {subject}")
-                
-                print(f"📄 Contenido Completo:\n{body.strip()}")
+                print(f"[1;34m🔸 Remitente:[0m {sender}")
+                print(f"[1;34m📅 Fecha:[0m     {date_str}")
+                print(f"[1;33m🔹 Asunto:[0m    {subject}")
+                print(f"[1;37m📄 Contenido:[0m
+{body.strip()}")
                 print("=" * 60)
 
     mail.logout()
+    print("[1;32m✅ Lectura finalizada con éxito.[0m
+")
+
 except Exception as e:
-    print(f"[1;31m❌ Error al conectar:[0m {e}")
+    print(f"
+[1;31m❌ Error de conexión o autenticación:[0m {e}
+")
 PYEOF
 OTP_EOF
     chmod +x "$HOME_DIR/leer-correo.sh"

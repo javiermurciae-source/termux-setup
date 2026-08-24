@@ -59,7 +59,14 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
 * 🔬 **Ingeniería Inversa & Laboratorio:** `jadx` (descompilador Java), `apktool`, `openjdk-17`, `gradle`.
 * 📶 **Sniffers Wi-Fi/Red:** `tcpdump`, `tshark` (Wireshark CLI).
 
-### 🎨 5. Estética, Shell & UI Restaurable
+### 🎮 5. Modo Offline & Entretenimiento Retro
+* 🕹️ **`tetris`:** Juego de Tetris clásico en colores y TUI para terminal con puntuaciones.
+* 🐍 **`nsnake` (alias `snake`):** El juego de la serpiente retro clásica.
+* 🚂 **`sl` (alias `tren`):** Animación clásica de la locomotora de vapor cruzando tu pantalla.
+* 📖 **`glow`:** Lector y renderizador Markdown elegante con estilos y modo oscuro para leer documentos y manuales sin internet.
+* 🕶️ **`cmatrix`:** Lluvia de código digital estilo Matrix para salvapantallas retro.
+
+### 🎨 6. Estética, Shell & UI Restaurable
 * 🐟 **Shell:** `fish` con Oh My Posh, Fastfetch y temas personalizados.
 * 🎛️ **UI & Teclado:** Restauración de teclas extras con NerdFonts (`󰥻`, `󰯌`, ``, `󱎸`, ``, `󱞂`), márgenes y proporciones milimétricas.
 * 📱 **Pinned Apps:** Respaldador y restaurador de las 12 aplicaciones ancladas del Launcher (WhatsApp, Brave, ChatGPT, Nequi, APatch, etc.).

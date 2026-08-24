@@ -89,7 +89,7 @@ step_packages() {
     pkg install -y glibc proot 2>/dev/null
     
     # Herramientas generales + Root + ADB
-    pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang alpine espeak aapt aapt2 apksigner dx ecj 2>/dev/null
+    pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix glow sl nsnake termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang alpine espeak aapt aapt2 apksigner dx ecj 2>/dev/null
     
     ok "Paquetes instalados (incluyendo sudo/tsu y ADB)"
 }
@@ -160,6 +160,9 @@ alias ..='cd ..'
 alias cls='clear'
 alias update='pkg update -y && pkg upgrade -y'
 alias horario='bash ~/horario.sh'
+alias tetris='python ~/tetris.py'
+alias snake='nsnake'
+alias tren='sl'
 alias gif='bash ~/gif-selector.sh'
 alias clip='bash ~/fzf_clipboard_scratchpad.sh'
 alias fix-media='fix-media'
@@ -1224,6 +1227,209 @@ SS_PYTHON_EOF
     ln -sf "$HOME_DIR/searchsploit.py" "$PREFIX/bin/searchsploit"
     ln -sf "$HOME_DIR/searchsploit.py" "$PREFIX/bin/sploit"
     ok "SearchSploit instalado y configurado exitosamente (Comando: searchsploit / sploit) 🛡️"
+
+    # Juego Retro Offline: Tetris CLI
+    cat << 'TETRIS_EOF' > "$HOME_DIR/tetris.py"
+#!/data/data/com.termux/files/usr/bin/python3
+"""
+🕹️ TETRIS CLI EN COLOR (100% Offline para Termux)
+Controles:
+  [← / a] Izquierda
+  [→ / d] Derecha
+  [↑ / w] Rotar
+  [↓ / s] Bajar rápido
+  [Espacio] Caída instantánea
+  [q] Salir
+"""
+
+import curses
+import random
+import time
+
+SHAPES = [
+    [[1, 1, 1, 1]], # I
+    [[1, 1], [1, 1]], # O
+    [[1, 1, 1], [0, 1, 0]], # T
+    [[1, 1, 1], [1, 0, 0]], # L
+    [[1, 1, 1], [0, 0, 1]], # J
+    [[1, 1, 0], [0, 1, 1]], # Z
+    [[0, 1, 1], [1, 1, 0]]  # S
+]
+
+COLORS = [1, 2, 3, 4, 5, 6, 7]
+
+class Tetris:
+    def __init__(self, height=20, width=10):
+        self.height = height
+        self.width = width
+        self.board = [[0 for _ in range(width)] for _ in range(height)]
+        self.score = 0
+        self.lines_cleared = 0
+        self.current_piece = self.new_piece()
+        self.game_over = False
+
+    def new_piece(self):
+        shape_idx = random.randint(0, len(SHAPES) - 1)
+        shape = SHAPES[shape_idx]
+        color = COLORS[shape_idx]
+        return {
+            'shape': shape,
+            'color': color,
+            'x': self.width // 2 - len(shape[0]) // 2,
+            'y': 0
+        }
+
+    def rotate_piece(self):
+        shape = self.current_piece['shape']
+        rotated = [list(row) for row in zip(*shape[::-1])]
+        old_shape = self.current_piece['shape']
+        self.current_piece['shape'] = rotated
+        if self.check_collision():
+            self.current_piece['shape'] = old_shape
+
+    def check_collision(self, offset_x=0, offset_y=0):
+        shape = self.current_piece['shape']
+        for r, row in enumerate(shape):
+            for c, val in enumerate(row):
+                if val:
+                    new_x = self.current_piece['x'] + c + offset_x
+                    new_y = self.current_piece['y'] + r + offset_y
+                    if new_x < 0 or new_x >= self.width or new_y >= self.height:
+                        return True
+                    if new_y >= 0 and self.board[new_y][new_x]:
+                        return True
+        return False
+
+    def merge_piece(self):
+        shape = self.current_piece['shape']
+        for r, row in enumerate(shape):
+            for c, val in enumerate(row):
+                if val:
+                    self.board[self.current_piece['y'] + r][self.current_piece['x'] + c] = self.current_piece['color']
+        self.clear_lines()
+        self.current_piece = self.new_piece()
+        if self.check_collision():
+            self.game_over = True
+
+    def clear_lines(self):
+        new_board = [row for row in self.board if any(val == 0 for val in row)]
+        cleared = self.height - len(new_board)
+        self.lines_cleared += cleared
+        self.score += (cleared ** 2) * 100
+        for _ in range(cleared):
+            new_board.insert(0, [0 for _ in range(self.width)])
+        self.board = new_board
+
+    def move(self, dx, dy):
+        if not self.check_collision(dx, dy):
+            self.current_piece['x'] += dx
+            self.current_piece['y'] += dy
+            return True
+        elif dy > 0:
+            self.merge_piece()
+            return False
+        return False
+
+    def hard_drop(self):
+        while self.move(0, 1):
+            pass
+
+def main(stdscr):
+    curses.curs_set(0)
+    stdscr.nodelay(True)
+    curses.start_color()
+    curses.use_default_colors()
+
+    # Inicializar pares de colores ANSI
+    curses.init_pair(1, curses.COLOR_CYAN, -1)
+    curses.init_pair(2, curses.COLOR_YELLOW, -1)
+    curses.init_pair(3, curses.COLOR_MAGENTA, -1)
+    curses.init_pair(4, curses.COLOR_WHITE, -1)
+    curses.init_pair(5, curses.COLOR_BLUE, -1)
+    curses.init_pair(6, curses.COLOR_RED, -1)
+    curses.init_pair(7, curses.COLOR_GREEN, -1)
+
+    game = Tetris()
+    last_fall = time.time()
+    fall_speed = 0.45
+
+    while not game.game_over:
+        stdscr.clear()
+        h, w = stdscr.getmaxyx()
+        start_y = max(1, (h - 22) // 2)
+        start_x = max(2, (w - 30) // 2)
+
+        # Marco del tablero
+        stdscr.addstr(start_y - 1, start_x, "╔════════════════════╗  🎮 TETRIS RETRO", curses.A_BOLD)
+        for r in range(game.height):
+            stdscr.addstr(start_y + r, start_x, "║")
+            for c in range(game.width):
+                val = game.board[r][c]
+                # Verificar pieza actual
+                in_piece = False
+                p = game.current_piece
+                pr = r - p['y']
+                pc = c - p['x']
+                if 0 <= pr < len(p['shape']) and 0 <= pc < len(p['shape'][0]) and p['shape'][pr][pc]:
+                    stdscr.addstr(start_y + r, start_x + 1 + c * 2, "██", curses.color_pair(p['color']) | curses.A_BOLD)
+                    in_piece = True
+                elif val:
+                    stdscr.addstr(start_y + r, start_x + 1 + c * 2, "██", curses.color_pair(val))
+                else:
+                    stdscr.addstr(start_y + r, start_x + 1 + c * 2, " ·", curses.A_DIM)
+            stdscr.addstr(start_y + r, start_x + 21, "║")
+
+        stdscr.addstr(start_y + game.height, start_x, "╚════════════════════╝")
+
+        # Panel de Puntuación
+        stdscr.addstr(start_y + 2, start_x + 25, f"🏆 Puntos: {game.score}", curses.A_BOLD)
+        stdscr.addstr(start_y + 4, start_x + 25, f"⚡ Líneas: {game.lines_cleared}", curses.A_BOLD)
+        stdscr.addstr(start_y + 7, start_x + 25, "⌨️  Controles:", curses.A_UNDERLINE)
+        stdscr.addstr(start_y + 9, start_x + 25, "← / a : Izquierda")
+        stdscr.addstr(start_y + 10, start_x + 25, "→ / d : Derecha")
+        stdscr.addstr(start_y + 11, start_x + 25, "↑ / w : Rotar")
+        stdscr.addstr(start_y + 12, start_x + 25, "↓ / s : Bajar")
+        stdscr.addstr(start_y + 13, start_x + 25, "Espacio: Caída")
+        stdscr.addstr(start_y + 15, start_x + 25, "q : Salir")
+
+        # Input
+        try:
+            key = stdscr.getch()
+            if key in [ord('q'), ord('Q')]:
+                break
+            elif key in [curses.KEY_LEFT, ord('a'), ord('A')]:
+                game.move(-1, 0)
+            elif key in [curses.KEY_RIGHT, ord('d'), ord('D')]:
+                game.move(1, 0)
+            elif key in [curses.KEY_UP, ord('w'), ord('W')]:
+                game.rotate_piece()
+            elif key in [curses.KEY_DOWN, ord('s'), ord('S')]:
+                game.move(0, 1)
+            elif key == ord(' '):
+                game.hard_drop()
+        except Exception:
+            pass
+
+        # Caída automática
+        if time.time() - last_fall > fall_speed:
+            game.move(0, 1)
+            last_fall = time.time()
+
+        stdscr.refresh()
+        time.sleep(0.03)
+
+    stdscr.nodelay(False)
+    stdscr.clear()
+    stdscr.addstr(10, 10, f"💀 GAME OVER! Puntuación final: {game.score}", curses.A_BOLD)
+    stdscr.addstr(12, 10, "Presiona cualquier tecla para salir...")
+    stdscr.getch()
+
+if __name__ == "__main__":
+    curses.wrapper(main)
+TETRIS_EOF
+    chmod +x "$HOME_DIR/tetris.py"
+    ln -sf "$HOME_DIR/tetris.py" "$PREFIX/bin/tetris"
+    ok "Juego Tetris CLI retro instalado (Comando: tetris) 🕹️"
 
     # CLI-Inbox (Gestor de Gmail en Python moderno con TUI)
     if [ ! -d "$HOME_DIR/.local/share/CLI-Inbox" ]; then

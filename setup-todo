@@ -1287,6 +1287,112 @@ TRANS_EOF
     ln -sf "$HOME_DIR/transfer-archivos.py" "$PREFIX/bin/file-sync"
     ok "Gestor de transferencia de archivos instalado (Comando: transfile / pasar-archivos) 📦"
 
+    # Script utilitario: VS Code Server Manager (IDE Completo en el Navegador)
+    cat << 'CODE_EOF' > "$HOME_DIR/vscode.sh"
+#!/data/data/com.termux/files/usr/bin/bash
+# 💻 VS Code Server Launcher & Manager para Termux
+# Permite iniciar, detener y abrir VS Code en el navegador local
+
+CONFIG_DIR="$HOME/.config/code-server"
+CONFIG_FILE="$CONFIG_DIR/config.yaml"
+
+C_CYAN="\033[1;36m"
+C_BLUE="\033[1;34m"
+C_GREEN="\033[1;32m"
+C_YELLOW="\033[1;33m"
+C_MAGENTA="\033[1;35m"
+C_RED="\033[1;31m"
+C_WHITE="\033[1;37m"
+C_BOLD="\033[1m"
+C_RESET="\033[0m"
+
+mkdir -p "$CONFIG_DIR"
+
+# Configuración por defecto: sin contraseña para acceso local ultra-rápido o con contraseña segura
+if [ ! -f "$CONFIG_FILE" ]; then
+cat << 'EOF' > "$CONFIG_FILE"
+bind-addr: 127.0.0.1:8080
+auth: none
+cert: false
+disable-telemetry: true
+EOF
+fi
+
+show_header() {
+    echo -e "${C_CYAN}╭──────────────────────────────────────────────────────────────╮${C_RESET}"
+    echo -e "${C_CYAN}│     💻  VISUAL STUDIO CODE SERVER (EN TU NAVEGADOR) ⚡       │${C_RESET}"
+    echo -e "${C_CYAN}╰──────────────────────────────────────────────────────────────╯${C_RESET}\n"
+}
+
+start_server() {
+    show_header
+    if pgrep -f "code-server" > /dev/null; then
+        echo -e "${C_YELLOW}⚠️  VS Code Server ya está corriendo en segundo plano.${C_RESET}"
+    else
+        echo -e "${C_BLUE}⏳ Iniciando VS Code Server en http://127.0.0.1:8080...${C_RESET}"
+        nohup code-server --auth none --bind-addr 0.0.0.0:8080 > "$HOME/.code-server.log" 2>&1 &
+        sleep 2
+        echo -e "${C_GREEN}✅ ¡VS Code Server iniciado exitosamente!${C_RESET}"
+    fi
+
+    echo -e "\n${C_GREEN}🌐 Acceso Local:${C_RESET} ${C_BOLD}${C_CYAN}http://127.0.0.1:8080${C_RESET}"
+    
+    # Obtener IP local Wi-Fi para acceder desde tu PC/Tablet
+    MY_IP=$(ip -o -4 addr show wlan0 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
+    if [ -n "$MY_IP" ]; then
+        echo -e "${C_MAGENTA}📱 Acceso desde tu PC / Tablet en la misma red Wi-Fi:${C_RESET} ${C_BOLD}${C_YELLOW}http://$MY_IP:8080${C_RESET}"
+    fi
+
+    echo -e "\n${C_WHITE}¿Deseas abrir VS Code en tu navegador de Android ahora? [S/n]:${C_RESET} "
+    read -r OPEN_BROWSER
+    if [[ "$OPEN_BROWSER" =~ ^[SsYy]?$ ]]; then
+        termux-open-url "http://127.0.0.1:8080" 2>/dev/null || am start -a android.intent.action.VIEW -d "http://127.0.0.1:8080" 2>/dev/null || true
+    fi
+}
+
+stop_server() {
+    show_header
+    echo -e "${C_RED}🛑 Deteniendo VS Code Server...${C_RESET}"
+    pkill -9 -f "code-server" 2>/dev/null || true
+    echo -e "${C_GREEN}✅ Servidor detenido.${C_RESET}\n"
+}
+
+status_server() {
+    show_header
+    if pgrep -f "code-server" > /dev/null; then
+        echo -e "${C_GREEN}🟢 Estado: CORRIENDO (Puerto 8080)${C_RESET}"
+        echo -e "👉 ${C_CYAN}http://127.0.0.1:8080${C_RESET}\n"
+    else
+        echo -e "${C_RED}🔴 Estado: DETENIDO${C_RESET}\n"
+    fi
+}
+
+case "$1" in
+    start)
+        start_server
+        ;;
+    stop)
+        stop_server
+        ;;
+    status)
+        status_server
+        ;;
+    restart)
+        stop_server
+        sleep 1
+        start_server
+        ;;
+    *)
+        start_server
+        ;;
+esac
+CODE_EOF
+    chmod +x "$HOME_DIR/vscode.sh"
+    ln -sf "$HOME_DIR/vscode.sh" "$PREFIX/bin/vscode"
+    ln -sf "$HOME_DIR/vscode.sh" "$PREFIX/bin/code-web"
+    ln -sf "$HOME_DIR/vscode.sh" "$PREFIX/bin/codeserver"
+    ok "Visual Studio Code Server configurado (Comando: vscode / code-web) 💻"
+
     # CLI-Inbox (Gestor de Gmail en Python moderno con TUI)
     if [ ! -d "$HOME_DIR/.local/share/CLI-Inbox" ]; then
         log 8.05 "Instalando CLI-Inbox (Gestor de correo Gmail para terminal)..."

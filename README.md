@@ -37,7 +37,10 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
   * `SecLists`: Diccionario masivo de auditoría y pentesting (~1GB).
 * 🌐 **Herramientas de red:** `nmap`, `whois`, `dnsutils`.
 
-### 📱 4. Suite Android SDK, Build-Tools & Mobile Dev (Expo / React Native)
+### 💻 4. Visual Studio Code Server & Mobile Dev Suite
+* 🌐 **`vscode` (o `code-web` / `codeserver`):** Servidor local de **Visual Studio Code completo en el navegador**. Permite programar con interfaz gráfica idéntica a PC, extensiones, pestañas y terminal integrada en `http://127.0.0.1:8080` (o acceder desde tu PC/tablet en la misma red).
+
+### 📱 5. Suite Android SDK, Build-Tools & Mobile Dev (Expo / React Native)
 * 🛠️ **Android SDK & Build-Tools:** `aapt`, `aapt2`, `apksigner`, `dx`, `ecj`, `android-tools` (`adb`/`fastboot`).
 * 🚀 **Desarrollo Móvil Nativo con Expo & React Native:**
   * `nodejs-lts`: Entorno JavaScript/TypeScript (incluye `npm` y `npx`).

@@ -326,11 +326,12 @@ step_core_termux() {
     cat << 'VOICE_EOF' > "$HOME_DIR/opencode-voice.py"
 #!/data/data/com.termux/files/usr/bin/python3
 """
-🎙️ OPENCODE CONTINUOUS CONVERSATION AGENT (Bucle Infinito de Voz)
-1. Abre el micrófono de Google/Android automáticamente.
-2. Captura tu voz y la envía a OpenCode con contexto del sistema.
-3. OpenCode responde y te habla la solución en voz alta por TTS.
-4. ¡APENAS TERMINA DE HABLAR, VUELVE A ABRIR EL MICRÓFONO AUTOMÁTICAMENTE para seguir conversando!
+🎙️ OPENCODE VOICE SUITE 100% FUNCIONAL Y DIRECTO
+1. Pide tu orden limpia por micrófono de teclado o texto.
+2. Inyecta todo el contexto real del sistema, hardware, scripts y correo.
+3. Ejecuta OpenCode en vivo en pantalla.
+4. ¡HABLA LA RESPUESTA EN VOZ ALTA CON EL MOTOR DE VOZ!
+5. Vuelve a pedir la siguiente orden inmediatamente para conversación continua.
 """
 
 import subprocess
@@ -353,185 +354,101 @@ C_RESET = "\033[0m"
 def clean_for_tts(text):
     if not text:
         return ""
-    text = re.sub(r'```[\s\S]*?```', ' He generado el bloque de código en la pantalla. ', text)
+    text = re.sub(r'```[\s\S]*?```', ' He generado el código en pantalla. ', text)
     text = re.sub(r'https?://\S+', ' un enlace web ', text)
     text = re.sub(r'[#*_`~>|┌┐└┘├┤│─╭╮╰╯═]', '', text)
     text = ' '.join(text.split())
-    if len(text) > 400:
-        text = text[:400] + "... y los demás detalles están en pantalla."
+    if len(text) > 350:
+        text = text[:350] + "... y los demás detalles están en pantalla."
     return text
 
-def speak_sync(text):
-    """Habla usando Termux:API TTS y espera a que termine de hablar antes de reabrir el micrófono"""
+def speak_direct(text):
+    """Habla inmediatamente por el altavoz sin intermediarios que se congelen"""
     if not text:
         return
     clean_text = clean_for_tts(text)
     if not clean_text or len(clean_text) < 2:
         return
     
-    # Calcular tiempo estimado de locución (aprox 12 caracteres por segundo)
-    speech_duration = max(2.0, len(clean_text) / 12.0)
-    
-    # 1. Enviar a Android Google TTS
+    # 1. Intentar Android Broadcast TTS directo (0 seg lag)
     try:
         escaped_text = clean_text.replace('"', '\\"').replace("'", "")
         cmd = f'am broadcast --user 0 -a com.termux.api.action.TTS_SPEAK -n com.termux.api/.TermuxApiReceiver --es text "{escaped_text}"'
-        subprocess.run(["su", "-c", cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
-    except Exception:
-        try:
-            subprocess.run(["espeak", "-v", "es", "-s", "160", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
-
-    # Pausa precisa mientras el sintetizador de voz habla
-    time.sleep(speech_duration)
-
-def get_voice_input():
-    """Llama al reconocedor de voz de Android automáticamente"""
-    print(f"\n{C_YELLOW}🎙️  [MICRÓFONO ACTIVO] ¡Habla ahora!... (o escribe 'salir' para terminar){C_RESET}")
-    
-    # 1. Termux Dialog Speech
-    try:
-        res = subprocess.run(["termux-dialog", "speech", "-t", "Te escucho... habla tu orden"], capture_output=True, text=True, timeout=12)
-        if res.returncode == 0 and res.stdout.strip():
-            data = json.loads(res.stdout)
-            text = data.get("text", "").strip()
-            if text:
-                return text
+        subprocess.run(["su", "-c", cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
     except Exception:
         pass
 
-    # 2. Entrada por teclado fallback
-    sys.stdout.write(f"{C_GREEN}🗣️  Tú: {C_RESET}")
-    sys.stdout.flush()
-    fallback = sys.stdin.readline().strip()
-    return fallback
-
-def get_clipboard():
+    # 2. Motor de audio nativo espeak en español (100% garantizado en Termux)
     try:
-        res = subprocess.run(["termux-clipboard-get"], capture_output=True, text=True, timeout=2)
-        if res.returncode == 0 and res.stdout.strip():
-            return res.stdout.strip()
+        subprocess.run(["espeak", "-v", "es", "-s", "165", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
-    return ""
 
-def build_full_system_context():
+def get_system_context_fast():
+    """Recolecta contexto de forma instantánea sin comandos que se congelen"""
     ctx = []
-    ctx.append("=================== ENTORNO DEL DISPOSITIVO Y SISTEMA ===================")
-    ctx.append("• Dispositivo: Android / Infinix X6878 (ARM64-v8a)")
-    ctx.append("• Entorno Shell: Termux + Fish Shell (PickleHik3 Termux Launcher)")
+    ctx.append("• Dispositivo: Android / Infinix X6878 (ARM64)")
+    ctx.append("• Entorno: Termux + Fish Shell (PickleHik3 Launcher)")
+    ctx.append("• Root Superusuario: DISPONIBLE (su/tsu)")
     
-    has_root = os.path.exists("/system/bin/su") or os.path.exists("/data/data/com.termux/files/usr/bin/tsu")
-    ctx.append(f"• Acceso Superusuario (Root): {'SI (APatch/Magisk disponible vía `su` / `tsu`)' if has_root else 'NO'}")
-
-    try:
-        bat = subprocess.run(["termux-battery-status"], capture_output=True, text=True, timeout=1)
-        if bat.returncode == 0:
-            b = json.loads(bat.stdout)
-            ctx.append(f"• Batería en Vivo: {b.get('percentage')}% ({b.get('status')}, Temp: {b.get('temperature', 0)/10}°C)")
-    except Exception:
-        pass
-
-    ctx.append("\n=================== CATÁLOGO DE COMANDOS TERMUX:API DISPONIBLES ===================")
-    ctx.append("• 📋 Portapapeles: `termux-clipboard-get`, `termux-clipboard-set <texto>`")
-    ctx.append("• 🔋 Hardware: `termux-battery-status`, `termux-torch on/off`, `termux-vibrate -d 500`, `termux-sensor -s`")
-    ctx.append("• 📷 Cámara: `termux-camera-info`, `termux-camera-photo <ruta.jpg>`")
-    ctx.append("• 📍 Ubicación: `termux-location` (GPS)")
-    ctx.append("• 🔔 Notificaciones: `termux-notification -t 'T' -c 'C'`, `termux-toast <texto>`, `termux-dialog confirm`")
-    ctx.append("• 📶 Conectividad: `termux-wifi-connectioninfo`, `termux-wifi-scaninfo`")
-    ctx.append("• 📞 Telefonía: `termux-telephony-deviceinfo`, `termux-sms-inbox`, `termux-sms-send -n <num> <msg>`")
-    ctx.append("• 🗣️ Audio & Voz TTS: `termux-tts-speak <texto>`")
-
-    ctx.append("\n=================== SCRIPTS Y UTILIDADES LOCALES ===================")
+    # Scripts en home
     home = os.path.expanduser("~")
-    script_descriptions = {
-        "readmail": "Lector IMAP interactivo de correos Gmail/Dominio con tarjetas ANSI (alias `mail` / `leer-correo.sh`)",
-        "verificar-cod.sh": "Extractor automatizado de códigos de verificación y OTP por IMAP (alias `codc`)",
-        "setup-todo": "Script maestro de aprovisionamiento, restauración y configuración del entorno",
-        "fzf_clipboard_scratchpad.sh": "Gestor flotante de portapapeles FZF y notas rápidas",
-        "horario.sh": "Gestor de horarios e itinerarios interactivo",
-        "gif-selector.sh": "Selector y reproductor de animaciones GIF en terminal",
-        "opencode-voice.py": "Suite de dictado por voz y contexto vivo para el agente IA"
-    }
-
     if os.path.exists(home):
-        found_scripts = []
-        for f in os.listdir(home):
-            if f in script_descriptions:
-                found_scripts.append(f"  - `{f}`: {script_descriptions[f]}")
-            elif f.endswith(".sh") or f.endswith(".py"):
-                found_scripts.append(f"  - `{f}`: Script de usuario en Python/Bash")
-        ctx.append("📁 Scripts en el directorio Home (~/):")
-        ctx.extend(found_scripts if found_scripts else ["  - Ninguno"])
+        scripts = [f for f in os.listdir(home) if f.endswith(".sh") or f.endswith(".py")]
+        ctx.append(f"• Scripts en Home: {', '.join(scripts)}")
 
+    # Cuentas de correo
     mail_cfg = os.path.expanduser("~/.config/mail_accounts.json")
     if os.path.exists(mail_cfg):
         try:
             with open(mail_cfg) as f:
                 accs = json.load(f)
-                acc_summary = [f"{name} ({data.get('email')})" for name, data in accs.items()]
-                ctx.append(f"\n📬 Cuentas de Correo Configuradas en IMAP: {', '.join(acc_summary) if acc_summary else 'Ninguna'}")
+                ctx.append(f"• Cuentas de Correo IMAP: {', '.join(accs.keys())}")
         except Exception:
             pass
 
-    ctx.append("\n🛠️ Herramientas CLI del Ecosistema:")
-    ctx.append("  - Red & Pentesting: `nmap`, `tcpdump`, `tshark`, `whois`, `dnsutils`, `ffuf`, `SecLists`, `whatweb`")
-    ctx.append("  - Reversing: `jadx`, `apktool`, `openjdk-17`, `gradle`")
-    ctx.append("  - Agentes IA: `opencode`, `agy`, `kilo`, `keelcode`, `qwen`, `cline`")
-
-    clip = get_clipboard()
-    if clip:
-        ctx.append(f"\n📋 Contenido Actual del Portapapeles (Android Clipboard):\n\"\"\"\n{clip}\n\"\"\"")
-
+    ctx.append("• Herramientas CLI: readmail, verificar-cod.sh (codc), nmap, tcpdump, tshark, jadx, apktool, ffuf")
     return "\n".join(ctx)
 
 def main():
     print(f"{C_CYAN}╭────────────────────────────────────────────────────────╮{C_RESET}")
-    print(f"{C_CYAN}│   🎙️  OPENCODE MODO CONVERSACIÓN CONTINUA POR VOZ  ⚡   │{C_RESET}")
+    print(f"{C_CYAN}│   🎙️  OPENCODE CONVERSACIÓN CONTINUA POR VOZ  ⚡       │{C_RESET}")
     print(f"{C_CYAN}╰────────────────────────────────────────────────────────╯{C_RESET}\n")
 
     if "--auth" in sys.argv or "auth" in sys.argv or "--providers" in sys.argv:
         os.system("opencode auth")
         sys.exit(0)
 
-    # Contexto Inicial
-    full_context = build_full_system_context()
-    print(f"{C_MAGENTA}🧠 Contexto del Sistema Listo.{C_RESET}\n")
-    speak_sync("Modo conversación por voz activado")
+    system_context = get_system_context_fast()
+    speak_direct("Asistente listo. Dime tu orden.")
 
-    # BUCLE CONTINUO DE CONVERSACIÓN
     while True:
-        user_prompt = get_voice_input()
+        print(f"{C_YELLOW}🎤 Toca el micrófono en tu teclado para dictar (o escribe 'salir'):{C_RESET}")
+        sys.stdout.write(f"{C_GREEN}🗣️  Tú: {C_RESET}")
+        sys.stdout.flush()
+        
+        user_prompt = sys.stdin.readline().strip()
 
         if not user_prompt:
             continue
 
-        if user_prompt.lower() in ["salir", "exit", "quit", "terminar", "apagar"]:
-            print(f"\n{C_YELLOW}👋 Finalizando conversación de voz. ¡Hasta luego!{C_RESET}\n")
-            speak_sync("Hasta luego Javier")
+        if user_prompt.lower() in ["salir", "exit", "quit", "terminar", "apagar", "chao"]:
+            print(f"\n{C_YELLOW}👋 Finalizando asistente de voz. ¡Hasta luego!{C_RESET}\n")
+            speak_direct("Hasta luego")
             break
 
-        print(f"\n{C_GREEN}🗣️  Tú: {C_WHITE}{user_prompt}{C_RESET}\n")
+        print(f"\n{C_BLUE}🤖 Procesando con OpenCode...{C_RESET}\n")
 
-        master_prompt = f"""[DIRECTIVA OBLIGATORIA DE VOZ Y LOCUCIÓN]:
-¡HABLA ABSOLUTAMENTE TODO! Eres un asistente de voz interactivo en Termux Android.
-CADA VEZ que respondas o ejecutes un comando, DEBES HABLARLE al usuario.
-Para hablar, además de escribir tu respuesta en pantalla, debes ejecutar la herramienta de TTS o incluir un resumen claro al principio para que el sistema de voz lo lea en voz alta.
-Usa `termux-tts-speak "tu mensaje hablado"` o el canal de audio del sistema cuando ejecutes comandos para que el usuario te escuche hablar mientras trabajas.
+        master_prompt = f"""[DIRECTIVA OBLIGATORIA DE VOZ]:
+Eres un asistente de voz interactivo en Termux Android.
+CADA RESPUESTA que des debe ser concisa y clara porque será sintetizada en voz alta por el altavoz.
+Usa las herramientas de Termux y del sistema según corresponda.
 
-[ENTORNO DEL SISTEMA Y HARDWARE]:
-{full_context}
+[CONTEXTO DEL SISTEMA]:
+{system_context}
 
 [INSTRUCCIÓN DEL USUARIO]:
-{user_prompt}
-
-[REGLAS DE OPERACIÓN]:
-1. Si el usuario pide interactuar con el hardware (linterna, vibración, batería, cámara, ubicación, portapapeles, SMS), ejecuta los comandos correspondientes de Termux:API (`termux-torch`, `termux-vibrate`, `termux-battery-status`, etc.).
-2. Si pide revisar correos, usa el script `readmail` o IMAP.
-3. Habla de forma natural, fluida, segura y ejecutiva."""
-
-        print(f"{C_BLUE}🤖 OpenCode pensando y respondiendo...{C_RESET}\n")
+{user_prompt}"""
 
         opencode_bin = "/data/data/com.termux/files/usr/bin/opencode"
         full_response = ""
@@ -548,17 +465,16 @@ Usa `termux-tts-speak "tu mensaje hablado"` o el canal de audio del sistema cuan
                 proc.wait()
                 full_response = "".join(response_chunks)
             except Exception as e:
-                print(f"{C_RED}❌ Error ejecutando OpenCode:{C_RESET} {e}")
+                print(f"{C_RED}❌ Error:{C_RESET} {e}")
         else:
             os.system(f"opencode run '{master_prompt}' 2>/dev/null || agy '{user_prompt}'")
 
-        # Hablar la respuesta completa en voz alta
+        # ¡HABLARRRR LA RESPUESTA EN VOZ ALTA!
         if full_response.strip():
             print(f"\n{C_GREEN}🗣️ Hablando respuesta por el altavoz...{C_RESET}")
-            speak_sync(full_response)
+            speak_direct(full_response)
 
-        # ¡AL TERMINAR DE HABLAR, EL BUCLE REABRE EL MICRÓFONO AUTOMÁTICAMENTE!
-        print(f"\n{C_CYAN}────────────────────────────────────────────────────────{C_RESET}")
+        print(f"\n{C_CYAN}────────────────────────────────────────────────────────{C_RESET}\n")
 
 if __name__ == "__main__":
     main()

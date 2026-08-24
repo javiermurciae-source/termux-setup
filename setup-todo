@@ -195,60 +195,89 @@ step_termux_ui() {
     echo -e "\n\e[1;33m❓ ¿Deseas restaurar la configuración visual (Teclas, Tamaños y Pinned Apps)? [S/n]: \e[0m\c"
     read -r -t 15 resp_ui
     if [[ "$resp_ui" =~ ^([sS]|)$ ]] || [[ -z "$resp_ui" ]]; then
-        log 10 "Restaurando proporciones visuales y botones del teclado..."
+        log 10 "Restaurando proporciones visuales, botones y aplicaciones ancladas..."
         mkdir -p "$HOME_DIR/.termux"
     
-    # 1. Configurar botones extras (termux.properties)
-    cat << 'EOF' > "$HOME_DIR/.termux/termux.properties"
+        # 1. Configurar botones extras (termux.properties)
+        cat << 'EOF' > "$HOME_DIR/.termux/termux.properties"
 fullscreen=false
 extra-keys=[[{"key":"KEYBOARD","display":"󰥻","popup":{"key":"tool:terminal.select_at_cursor","display":"󱈅"}},{"key":"tool:pane.split_horizontal","display":"󰯌","popup":{"key":"tool:pane.split_vertical","display":"Split pane vertically"}},{"key":"tool:pane.kill_focused","display":"","popup":{"key":"tool:session.new","display":"New session"}},{"key":"tool:terminal.search_scrollback","display":"󱎸","popup":{"key":"tool:terminal.hints","display":"󰌹"}},{"key":"tool:workspace.picker","display":"","popup":{"key":"tool:clipboard.paste","display":"Paste"}},{"key":"tool:terminal.toggle_scratchpad","display":"󱞂","popup":{"key":"tool:pane.toggle_float","display":"󰹗"}}]]
 extra-keys2=[]
 EOF
     
-    # 2. Configurar tamaños de la interfaz (Preferences XML)
-    PREFS="/data/data/com.termux/shared_prefs/com.termux_preferences.xml"
-    if command -v python >/dev/null 2>&1; then
+        # 2. Inyección directa del mapa maestro de preferencias XML
         mkdir -p "/data/data/com.termux/shared_prefs"
-        python -c "
-import xml.etree.ElementTree as ET
-import os
-
-prefs = '$PREFS'
-if os.path.exists(prefs):
-    tree = ET.parse(prefs)
-    root = tree.getroot()
-else:
-    root = ET.Element('map')
-    tree = ET.ElementTree(root)
-    
-def set_val(tag, name, val):
-    for elem in root.findall(tag):
-        if elem.get('name') == name:
-            if tag == 'string':
-                elem.text = val
-            else:
-                elem.set('value', val)
-            return
-    new_elem = ET.SubElement(root, tag)
-    new_elem.set('name', name)
-    if tag == 'string':
-        new_elem.text = val
-    else:
-        new_elem.set('value', val)
-    
-set_val('float', 'in_app_keyboard_height_scale', '0.709')
-set_val('float', 'in_app_keyboard_key_margin_scale', '2.96')
-set_val('int', 'in_app_keyboard_horizontal_inset', '13')
-set_val('float', 'in_app_keyboard_key_corner_radius_dp', '2.7')
-set_val('float', 'app_launcher_bar_height', '1.72')
-pinned_apps = '{"schemaVersion":5,"items":[{"type":"app","packageName":"com.whatsapp","activityName":"com.whatsapp.Main"},{"type":"app","packageName":"com.brave.browser","activityName":"com.google.android.apps.chrome.Main"},{"type":"app","packageName":"com.transsion.camera","activityName":"com.android.camera.CameraLauncher"},{"type":"app","packageName":"com.openai.chatgpt","activityName":"com.openai.chatgpt.MainActivity"},{"type":"app","packageName":"com.google.android.gm","activityName":"com.google.android.gm.ConversationListActivityGmail"},{"type":"app","packageName":"com.nequi.MobileApp","activityName":"com.nequi.MobileApp.MainActivity"},{"type":"app","packageName":"me.bmax.apatch","activityName":"me.bmax.apatch.ui.MainActivity"},{"type":"app","packageName":"com.binance.dev","activityName":"com.eaas.launcher.activities.main.MainActivity"},{"type":"app","packageName":"com.discord","activityName":"com.discord.main.MainDefault"},{"type":"app","packageName":"com.google.android.dialer","activityName":"com.google.android.dialer.extensions.GoogleDialtactsActivity"},{"type":"app","packageName":"com.google.android.apps.youtube.music","activityName":"com.google.android.apps.youtube.music.activities.MusicActivity"},{"type":"app","packageName":"com.pinterest","activityName":"com.pinterest.activity.PinterestActivity"}],"folders":[],"appIconOverrides":[]}'
-set_val('string', 'app_launcher_pinned_items_v2', pinned_apps)
-
-tree.write(prefs, encoding='utf-8', xml_declaration=True)
-"
-    fi
-    
-    ok "Teclado e interfaz sincronizados (Tamaños personalizados aplicados) 🎛️"
+        cat << 'EOF' > "/data/data/com.termux/shared_prefs/com.termux_preferences.xml"
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <boolean name="app_launcher_notification_history" value="false" />
+    <boolean name="tai_openai_auto_load" value="true" />
+    <string name="current_session">9ceb3847-dff7-4f1f-9b07-405a940208f9</string>
+    <int name="wallpaper_enabled_terminal_background_opacity" value="47" />
+    <int name="app_bar_opacity" value="46" />
+    <boolean name="tai_lan_enabled" value="false" />
+    <boolean name="app_launcher_extra_keys_row_enabled" value="true" />
+    <boolean name="terminal_margin_adjustment" value="true" />
+    <boolean name="app_launcher_widget_pane_enabled" value="true" />
+    <boolean name="app_launcher_drawer_enabled" value="true" />
+    <string name="top_pane_clock_style">flip</string>
+    <boolean name="show_key_hints" value="true" />
+    <string name="keyboard_input_method">built_in</string>
+    <string name="fontsize_scratchpad">36</string>
+    <string name="app_launcher_pinned_items_v2">{"schemaVersion":5,"items":[{"type":"app","packageName":"com.whatsapp","activityName":"com.whatsapp.Main"},{"type":"app","packageName":"com.brave.browser","activityName":"com.google.android.apps.chrome.Main"},{"type":"app","packageName":"com.transsion.camera","activityName":"com.android.camera.CameraLauncher"},{"type":"app","packageName":"com.openai.chatgpt","activityName":"com.openai.chatgpt.MainActivity"},{"type":"app","packageName":"com.google.android.gm","activityName":"com.google.android.gm.ConversationListActivityGmail"},{"type":"app","packageName":"com.nequi.MobileApp","activityName":"com.nequi.MobileApp.MainActivity"},{"type":"app","packageName":"me.bmax.apatch","activityName":"me.bmax.apatch.ui.MainActivity"},{"type":"app","packageName":"com.binance.dev","activityName":"com.eaas.launcher.activities.main.MainActivity"},{"type":"app","packageName":"com.discord","activityName":"com.discord.main.MainDefault"},{"type":"app","packageName":"com.google.android.dialer","activityName":"com.google.android.dialer.extensions.GoogleDialtactsActivity"},{"type":"app","packageName":"com.google.android.apps.youtube.music","activityName":"com.google.android.apps.youtube.music.activities.MusicActivity"},{"type":"app","packageName":"com.pinterest","activityName":"com.pinterest.activity.PinterestActivity"}],"folders":[],"appIconOverrides":[]}</string>
+    <boolean name="priv_master_enabled" value="true" />
+    <string name="terminal_contrast_level">default</string>
+    <int name="log_level" value="1" />
+    <boolean name="app_launcher_most_used_page" value="false" />
+    <boolean name="app_launcher_az_row_enabled" value="true" />
+    <int name="in_app_keyboard_key_opacity" value="-1" />
+    <int name="terminal_background_opacity" value="47" />
+    <boolean name="top_pane_clock_am_pm" value="false" />
+    <boolean name="priv_prefer_shizuku" value="true" />
+    <int name="managed_wallpaper_system_id" value="6" />
+    <boolean name="fullscreen" value="false" />
+    <boolean name="priv_allow_shell_fallback" value="true" />
+    <string name="app_launcher_dock_style">default</string>
+    <boolean name="terminal_margin_adjustment_default_migration_done" value="true" />
+    <boolean name="app_launcher_bw_icons" value="true" />
+    <boolean name="top_pane_clock_collapsed" value="false" />
+    <boolean name="terminal_dynamic_colors_enabled" value="true" />
+    <float name="in_app_keyboard_key_corner_radius_dp" value="2.7" />
+    <int name="wallpaper_enabled_app_bar_opacity" value="46" />
+    <boolean name="show_in_recents_when_not_default" value="true" />
+    <string name="surface_tuning_last_section">dock</string>
+    <int name="wallpaper_enabled_extrakeys_blur_radius" value="10" />
+    <boolean name="split_pane_controls" value="true" />
+    <boolean name="app_launcher_row_haptics" value="true" />
+    <string name="app_launcher_az_lock_method">off</string>
+    <boolean name="nerd_icons" value="true" />
+    <boolean name="status_widget_cpu" value="false" />
+    <float name="in_app_keyboard_key_margin_scale" value="2.96" />
+    <boolean name="use_system_wallpaper" value="true" />
+    <int name="extrakeys_blur_radius" value="10" />
+    <int name="terminal_session_number_since_boot" value="59" />
+    <boolean name="status_widget_ram" value="false" />
+    <boolean name="wallpaper_read_permission_prompted" value="true" />
+    <float name="in_app_keyboard_height_scale" value="0.709" />
+    <boolean name="lazy_mode" value="false" />
+    <float name="app_launcher_bar_height" value="1.72" />
+    <boolean name="status_widget_weather" value="true" />
+    <int name="dock_horizontal_inset" value="11" />
+    <int name="in_app_keyboard_horizontal_inset" value="13" />
+    <boolean name="tai_api_auth_required" value="true" />
+    <string name="ui_color_source">wallpaper</string>
+    <int name="in_app_keyboard_background_opacity" value="100" />
+    <boolean name="status_widget_weather_fahrenheit" value="false" />
+    <boolean name="app_launcher_apps_row_enabled" value="true" />
+    <string name="app_launcher_input_char">%</string>
+    <boolean name="app_launcher_notification_dots" value="false" />
+    <int name="dock_glass_grain" value="17" />
+    <boolean name="extra_keys_text_all_caps" value="true" />
+    <int name="app_launcher_pinned_items_schema_version" value="5" />
+</map>
+EOF
+        chmod 660 "/data/data/com.termux/shared_prefs/com.termux_preferences.xml" 2>/dev/null
+        ok "Teclado, tamaños y Pinned Apps sincronizados al 100% 🎛️"
     else
         warn "Omitiendo restauración visual y Pinned Apps."
     fi

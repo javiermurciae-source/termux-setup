@@ -326,9 +326,11 @@ step_core_termux() {
     cat << 'VOICE_EOF' > "$HOME_DIR/opencode-voice.py"
 #!/data/data/com.termux/files/usr/bin/python3
 """
-🎙️ OPENCODE ASISTENTE POR VOZ ULTRA-RÁPIDO
-- Modo Conversación Continua: Dictas -> OpenCode Responde -> Habla en Voz Alta -> Vuelve a escuchar
-- Compatible 100% con el micrófono de dictado de voz de tu teclado
+🎙️ OPENCODE ASISTENTE POR VOZ CON ACTIVACIÓN AUTOMÁTICA DEL MICRÓFONO
+- Lanza automáticamente el botón de micrófono por hardware/input keyevent
+- OpenCode procesa con contexto real del sistema
+- Habla la respuesta por el altavoz (Google TTS)
+- Vuelve a activar el micrófono automáticamente
 """
 
 import subprocess
@@ -360,14 +362,12 @@ def clean_for_tts(text):
     return text
 
 def speak(text):
-    """Habla inmediatamente por el altavoz"""
     if not text:
         return
     clean_text = clean_for_tts(text)
     if not clean_text or len(clean_text) < 2:
         return
     
-    # 1. Android Broadcast TTS (Google Voice)
     try:
         escaped = clean_text.replace('"', '\\"').replace("'", "")
         cmd = f'am broadcast --user 0 -a com.termux.api.action.TTS_SPEAK -n com.termux.api/.TermuxApiReceiver --es text "{escaped}"'
@@ -375,9 +375,15 @@ def speak(text):
     except Exception:
         pass
 
-    # 2. Espeak motor nativo español
     try:
         subprocess.run(["espeak", "-v", "es", "-s", "165", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+def trigger_voice_mic_auto():
+    """Lanza el micrófono de dictado de voz de Android automáticamente usando KeyEvent 231 (KEYCODE_VOICE_ASSIST)"""
+    try:
+        subprocess.run(["su", "-c", "input keyevent 231 2>/dev/null || input keyevent KEYCODE_VOICE_ASSIST 2>/dev/null"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
 
@@ -405,7 +411,7 @@ def get_system_context():
 
 def main():
     print(f"{C_CYAN}╭────────────────────────────────────────────────────────╮{C_RESET}")
-    print(f"{C_CYAN}│   🎙️  OPENCODE CONVERSACIÓN TOTAL POR VOZ  ⚡          │{C_RESET}")
+    print(f"{C_CYAN}│   🎙️  OPENCODE CONVERSACIÓN TOTAL POR VOZ (AUTO)  ⚡   │{C_RESET}")
     print(f"{C_CYAN}╰────────────────────────────────────────────────────────╯{C_RESET}\n")
 
     if "--auth" in sys.argv or "auth" in sys.argv or "--providers" in sys.argv:
@@ -416,7 +422,11 @@ def main():
     speak("Asistente de voz activado. Te escucho.")
 
     while True:
-        print(f"{C_YELLOW}🎙️  [MICRÓFONO LISTO] Toca el icono de voz en tu teclado y habla:{C_RESET}")
+        print(f"\n{C_YELLOW}🎙️  [MICRÓFONO LANZADO AUTOMÁTICAMENTE] ¡Habla ahora!...{C_RESET}")
+        
+        # Activar micrófono de Google por hardware/input automáticamente
+        trigger_voice_mic_auto()
+        
         sys.stdout.write(f"{C_GREEN}🗣️  Tú: {C_RESET}")
         sys.stdout.flush()
         
@@ -467,7 +477,7 @@ Usa las herramientas de Termux y del sistema según corresponda.
             print(f"\n{C_GREEN}🗣️ Hablando respuesta por el altavoz...{C_RESET}")
             speak(full_response)
 
-        print(f"\n{C_CYAN}────────────────────────────────────────────────────────{C_RESET}\n")
+        print(f"\n{C_CYAN}────────────────────────────────────────────────────────{C_RESET}")
 
 if __name__ == "__main__":
     main()

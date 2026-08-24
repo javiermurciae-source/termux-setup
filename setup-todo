@@ -329,7 +329,8 @@ step_core_termux() {
 🎙️ OPENCODE VOICE & CONTEXT SUITE (Termux AI Agent)
 - Entrada por Voz (Micrófono Teclado)
 - Salida por Voz Hablada en Español (espeak nativo + termux-tts-speak)
-- Control total de Hardware vía Termux:API (Cámara, GPS, Linterna, Batería, SMS, Toast)
+- Apertura 100% Interactiva de la TUI de OpenCode con prompt pre-cargado
+- Control total de Hardware vía Termux:API
 - Contexto vivo del sistema y scripts locales
 """
 
@@ -351,7 +352,6 @@ C_DIM = "\033[2;37m"
 C_RESET = "\033[0m"
 
 def clean_markdown_for_speech(text):
-    """Limpia bloques de código y markdown para que suene natural en voz alta"""
     if not text:
         return ""
     text = re.sub(r'```[\s\S]*?```', 'He generado el código en pantalla.', text)
@@ -363,24 +363,18 @@ def clean_markdown_for_speech(text):
     return text
 
 def speak(text):
-    """Habla la respuesta en español por el altavoz"""
     if not text:
         return
     clean_text = clean_markdown_for_speech(text)
     if not clean_text:
         return
-    
-    # 1. Intentar espeak nativo en español (rápido y garantizado)
     try:
         subprocess.Popen(["espeak", "-v", "es", "-s", "160", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return
     except Exception:
         pass
-
-    # 2. Intentar termux-tts-speak
     try:
         subprocess.Popen(["termux-tts-speak", "-l", "es", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return
     except Exception:
         pass
 
@@ -394,7 +388,6 @@ def get_clipboard():
     return ""
 
 def build_full_system_context():
-    """Construye un dossier de contexto profundo de todo el entorno Termux con detalle de Termux:API"""
     ctx = []
     ctx.append("=================== ENTORNO DEL DISPOSITIVO Y SISTEMA ===================")
     ctx.append("• Dispositivo: Android / Infinix X6878 (ARM64-v8a)")
@@ -502,30 +495,16 @@ Tienes a tu disposición el hardware del teléfono a través de Termux:API, acce
 2. Si el usuario te pide consultar correos o cuentas, usa el contexto de `readmail` e IMAP.
 3. Responde de forma concisa, técnica, precisa y accionable en Markdown."""
 
-    print(f"\n{C_BLUE}🤖 Ejecutando OpenCode y procesando respuesta...{C_RESET}\n")
+    print(f"\n{C_BLUE}🚀 Abriendo la interfaz interactiva de OpenCode...{C_RESET}\n")
+    speak("Abriendo OpenCode")
 
     opencode_bin = "/data/data/com.termux/files/usr/bin/opencode"
+    
+    # Reemplazar el proceso actual por OpenCode interactivo pasando --prompt
     if os.path.exists(opencode_bin):
-        cmd = [opencode_bin, "run", master_prompt]
-        try:
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-            output_lines = []
-            for line in proc.stdout:
-                sys.stdout.write(line)
-                sys.stdout.flush()
-                output_lines.append(line)
-            proc.wait()
-            
-            full_response = "".join(output_lines)
-            
-            # Hablar la respuesta por el altavoz
-            if full_response.strip():
-                speak(full_response)
-
-        except Exception as e:
-            print(f"{C_RED}❌ Error ejecutando OpenCode:{C_RESET} {e}")
+        os.execv(opencode_bin, [opencode_bin, "--prompt", master_prompt])
     else:
-        os.system(f"opencode run '{master_prompt}' 2>/dev/null || agy '{user_prompt}'")
+        os.system(f"opencode --prompt '{master_prompt}' 2>/dev/null || agy '{user_prompt}'")
 
 if __name__ == "__main__":
     main()

@@ -72,10 +72,10 @@ step_termux_config() {
 
 # ── 4. Paquetes base ───────────────────────────────────────
 step_packages() {
-    log 4 "Optimizando servidores de descarga (Mirrors automáticos a Grimler)..."
-    echo "deb https://grimler.se/termux/termux-main stable main" > $PREFIX/etc/apt/sources.list
+    log 4 "Optimizando servidores de descarga (Mirrors automáticos a Purdue (EE.UU))..."
+    echo "deb https://plug-mirror.rcac.purdue.edu/termux/termux-main stable main" > $PREFIX/etc/apt/sources.list
     if [ -f "$PREFIX/etc/apt/sources.list.d/root.list" ]; then
-        echo "deb https://grimler.se/termux/termux-root root stable" > $PREFIX/etc/apt/sources.list.d/root.list
+        echo "deb https://plug-mirror.rcac.purdue.edu/termux/termux-root root stable" > $PREFIX/etc/apt/sources.list.d/root.list
     fi
     
     log 4.1 "Actualizando e instalando paquetes base, glibc y herramientas Root/ADB..."

@@ -1394,15 +1394,29 @@ CODE_EOF
     ok "Visual Studio Code Server configurado (Comando: vscode / code-web) 💻"
 
     # Exploit Database & SearchSploit (Buscador offline de CVEs y vulnerabilidades)
-    if [ ! -d "$HOME_DIR/.local/share/exploitdb" ]; then
+    mkdir -p "$HOME_DIR/.local/share"
+    if [ ! -f "$HOME_DIR/.local/share/exploitdb/searchsploit" ]; then
         log 8.3 "Instalando SearchSploit (Exploit-DB offline)..."
-        git clone --depth 1 https://github.com/offensive-security/exploitdb.git "$HOME_DIR/.local/share/exploitdb" >/dev/null 2>&1
-        sed -i "s|/opt/exploitdb|$HOME/.local/share/exploitdb|g" "$HOME_DIR/.local/share/exploitdb/.searchsploit_rc" 2>/dev/null || true
-        ln -sf "$HOME_DIR/.local/share/exploitdb/searchsploit" "$PREFIX/bin/searchsploit"
-        ln -sf "$HOME_DIR/.local/share/exploitdb/searchsploit" "$PREFIX/bin/sploit"
+        rm -rf "$HOME_DIR/.local/share/exploitdb"
+        git clone --progress --depth 1 https://github.com/offensive-security/exploitdb.git "$HOME_DIR/.local/share/exploitdb"
+    fi
+    if [ -f "$HOME_DIR/.local/share/exploitdb/searchsploit" ]; then
+        chmod +x "$HOME_DIR/.local/share/exploitdb/searchsploit"
+        cat << 'RC_EOF' > "$HOME_DIR/.searchsploit_rc"
+# SearchSploit Configuration
+export EXPLOITDB_PATH="$HOME/.local/share/exploitdb"
+export GITPATH="$HOME/.local/share/exploitdb"
+export PAGER="less -R"
+RC_EOF
+        cat << 'SS_WRAPPER' > "$PREFIX/bin/searchsploit"
+#!/data/data/com.termux/files/usr/bin/bash
+export EXPLOITDB_PATH="$HOME/.local/share/exploitdb"
+export GITPATH="$HOME/.local/share/exploitdb"
+bash "$HOME/.local/share/exploitdb/searchsploit" "$@"
+SS_WRAPPER
+        chmod +x "$PREFIX/bin/searchsploit"
+        ln -sf "$PREFIX/bin/searchsploit" "$PREFIX/bin/sploit"
         ok "SearchSploit configurado exitosamente (Comando: searchsploit / sploit) 🛡️"
-    else
-        ok "SearchSploit ya está instalado. ¡Omitiendo! ⚡"
     fi
 
     # CLI-Inbox (Gestor de Gmail en Python moderno con TUI)

@@ -376,9 +376,16 @@ while not EMAIL_USER:
     EMAIL_USER = input("\033[1;31m⚠️ El correo es obligatorio:\033[0m ").strip()
 
 # 4. Contraseña
-EMAIL_PASS = getpass.getpass("🔑 Contraseña o App Password: ").strip()
+try:
+    EMAIL_PASS = getpass.getpass("🔑 Contraseña o App Password: ").strip()
+except Exception:
+    EMAIL_PASS = input("🔑 Contraseña o App Password: ").strip()
+
 while not EMAIL_PASS:
-    EMAIL_PASS = getpass.getpass("\033[1;31m⚠️ La contraseña es obligatoria:\033[0m ").strip()
+    try:
+        EMAIL_PASS = getpass.getpass("\033[1;31m⚠️ La contraseña es obligatoria:\033[0m ").strip()
+    except Exception:
+        EMAIL_PASS = input("\033[1;31m⚠️ La contraseña es obligatoria:\033[0m ").strip()
 
 # 5. Cantidad de correos a leer
 count_input = input("🔢 ¿Cuántos correos recientes deseas leer? [Enter para 3]: ").strip()

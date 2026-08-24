@@ -1163,6 +1163,130 @@ chmod +x "$HOME_DIR/ssh-finder.py"
     ln -sf "$HOME_DIR/ssh-finder.py" "$PREFIX/bin/findpc"
     ok "Detector automático SSH para tu PC instalado (Comando: ssh-find / ssh-pc / findpc) ⚡"
 
+    # Script utilitario: Gestor de Transferencia de Archivos (PC <-> Termux)
+    cat << 'TRANS_EOF' > "$HOME_DIR/transfer-archivos.py"
+#!/data/data/com.termux/files/usr/bin/python3
+"""
+📦 FILE-TRANSFER PRO (Paso Rápido de Archivos PC <-> Termux)
+Usa rsync / scp / python http server / crosh para transferir archivos a máxima velocidad.
+"""
+
+import subprocess
+import os
+import sys
+import socket
+
+# Paleta de Colores ANSI
+C_CYAN = "\033[1;36m"
+C_BLUE = "\033[1;34m"
+C_GREEN = "\033[1;32m"
+C_YELLOW = "\033[1;33m"
+C_MAGENTA = "\033[1;35m"
+C_RED = "\033[1;31m"
+C_WHITE = "\033[1;37m"
+C_DIM = "\033[2;37m"
+C_BOLD = "\033[1m"
+C_RESET = "\033[0m"
+
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+def show_menu():
+    print(f"{C_CYAN}╭──────────────────────────────────────────────────────────────╮{C_RESET}")
+    print(f"{C_CYAN}│     📦  GESTOR DE TRANSFERENCIA DE ARCHIVOS (PC <-> TERMUX)  │{C_RESET}")
+    print(f"{C_CYAN}╰──────────────────────────────────────────────────────────────╯{C_RESET}\n")
+
+    print(f"{C_YELLOW}Selecciona el método de transferencia que deseas usar:{C_RESET}\n")
+    print(f"  {C_CYAN}[1]{C_RESET} {C_BOLD}📥 Descargar archivo/carpeta desde la PC hacia Termux{C_RESET} (vía SCP/Rsync)")
+    print(f"  {C_CYAN}[2]{C_RESET} {C_BOLD}📤 Enviar archivo/carpeta desde Termux hacia la PC{C_RESET} (vía SCP/Rsync)")
+    print(f"  {C_CYAN}[3]{C_RESET} {C_BOLD}🌐 Servidor Web Rápido (HTTP Portal){C_RESET} (Descargar desde el navegador)")
+    print(f"  {C_CYAN}[4]{C_RESET} {C_BOLD}🗂️  Montar la PC en Termux con SSHFS{C_RESET} (Explorar archivos en vivo)")
+    print(f"  {C_CYAN}[q]{C_RESET} Salir\n")
+
+    choice = input(f"{C_GREEN}👉 Elige una opción [1-4]:{C_RESET} ").strip()
+    return choice
+
+def handle_pull():
+    pc_ip = input(f"{C_WHITE}🌐 IP de la PC [Enter para auto-detectar o usar 192.168.40.8]:{C_RESET} ").strip()
+    if not pc_ip:
+        pc_ip = "192.168.40.8"
+    user = input(f"{C_WHITE}👤 Usuario de la PC [Enter para 'rootkit']:{C_RESET} ").strip()
+    if not user:
+        user = "rootkit"
+    
+    remote_path = input(f"{C_WHITE}📂 Ruta del archivo en la PC (ej: ~/Descargas/archivo.zip):{C_RESET} ").strip()
+    if not remote_path:
+        print(f"{C_RED}⚠️ La ruta remota es obligatoria.{C_RESET}")
+        return
+
+    dest = input(f"{C_WHITE}📥 Carpeta destino en Termux [Enter para ~/storage/shared/Download o actual]:{C_RESET} ").strip()
+    if not dest:
+        dest = "."
+
+    print(f"\n{C_BLUE}⏳ Descargando {remote_path} desde {user}@{pc_ip}...{C_RESET}\n")
+    cmd = f"rsync -avzP -e 'ssh -p 22' {user}@{pc_ip}:{remote_path} {dest} 2>/dev/null || scp -P 22 -r {user}@{pc_ip}:{remote_path} {dest}"
+    os.system(cmd)
+
+def handle_push():
+    pc_ip = input(f"{C_WHITE}🌐 IP de la PC [Enter para auto-detectar o usar 192.168.40.8]:{C_RESET} ").strip()
+    if not pc_ip:
+        pc_ip = "192.168.40.8"
+    user = input(f"{C_WHITE}👤 Usuario de la PC [Enter para 'rootkit']:{C_RESET} ").strip()
+    if not user:
+        user = "rootkit"
+
+    local_path = input(f"{C_WHITE}📂 Archivo/Carpeta local en Termux a enviar:{C_RESET} ").strip()
+    if not local_path:
+        print(f"{C_RED}⚠️ El archivo local es obligatorio.{C_RESET}")
+        return
+
+    remote_dest = input(f"{C_WHITE}📤 Carpeta destino en la PC [Enter para ~/Descargas]:{C_RESET} ").strip()
+    if not remote_dest:
+        remote_dest = "~/Descargas/"
+
+    print(f"\n{C_BLUE}⏳ Enviando {local_path} hacia {user}@{pc_ip}:{remote_dest}...{C_RESET}\n")
+    cmd = f"rsync -avzP -e 'ssh -p 22' {local_path} {user}@{pc_ip}:{remote_dest} 2>/dev/null || scp -P 22 -r {local_path} {user}@{pc_ip}:{remote_dest}"
+    os.system(cmd)
+
+def handle_http():
+    port = "8000"
+    my_ip = get_local_ip()
+    print(f"\n{C_GREEN}🚀 Servidor Web temporal iniciado.{C_RESET}")
+    print(f"{C_YELLOW}Abre este enlace en el navegador de tu PC para descargar archivos:{C_RESET}")
+    print(f"{C_CYAN}👉 http://{my_ip}:{port}{C_RESET}\n")
+    print(f"{C_DIM}(Presiona Ctrl+C para detener el servidor){C_RESET}\n")
+    os.system(f"python3 -m http.server {port}")
+
+def main():
+    choice = show_menu()
+    if choice == "1":
+        handle_pull()
+    elif choice == "2":
+        handle_push()
+    elif choice == "3":
+        handle_http()
+    elif choice == "4":
+        print(f"\n{C_YELLOW}💡 Para montar la PC como una carpeta en Termux:{C_RESET}")
+        print(f"{C_WHITE}mkdir -p ~/pc_archivos && sshfs rootkit@192.168.40.8:/home/rootkit ~/pc_archivos{C_RESET}\n")
+    else:
+        print("Saliendo...")
+
+if __name__ == "__main__":
+    main()
+TRANS_EOF
+    chmod +x "$HOME_DIR/transfer-archivos.py"
+    ln -sf "$HOME_DIR/transfer-archivos.py" "$PREFIX/bin/transfile"
+    ln -sf "$HOME_DIR/transfer-archivos.py" "$PREFIX/bin/pasar-archivos"
+    ln -sf "$HOME_DIR/transfer-archivos.py" "$PREFIX/bin/file-sync"
+    ok "Gestor de transferencia de archivos instalado (Comando: transfile / pasar-archivos) 📦"
+
     # CLI-Inbox (Gestor de Gmail en Python moderno con TUI)
     if [ ! -d "$HOME_DIR/.local/share/CLI-Inbox" ]; then
         log 8.05 "Instalando CLI-Inbox (Gestor de correo Gmail para terminal)..."

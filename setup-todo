@@ -326,13 +326,11 @@ step_core_termux() {
     cat << 'VOICE_EOF' > "$HOME_DIR/opencode-voice.py"
 #!/data/data/com.termux/files/usr/bin/python3
 """
-🎙️ OPENCODE TOTAL VOICE & CONTEXT SUITE (Termux AI Agent)
-- Entrada por Voz (Micrófono Teclado)
-- Salida por Voz Hablada CONTINUA Y TOTAL con Termux:API TTS (Google TTS)
-- Inyección Directa de Voz en el Prompt del Agente (Obliga a ejecutar `termux-tts-speak` o `am broadcast` en cada respuesta)
-- Monitoreo en segundo plano de la sesión para hablar CADA RESPUESTA que dé OpenCode
-- Control total de Hardware vía Termux:API
-- Contexto vivo del sistema, scripts, IMAP y portapapeles
+🎙️ OPENCODE AUTO-VOICE (Speech-to-Text Automático + TTS + OpenCode)
+1. Lanza el diálogo de reconocimiento de voz de Google / Android automáticamente
+2. Captura lo que hablaste
+3. Inyecta el contexto del sistema y hardware
+4. Abre OpenCode y habla la respuesta en voz alta
 """
 
 import subprocess
@@ -355,7 +353,6 @@ C_DIM = "\033[2;37m"
 C_RESET = "\033[0m"
 
 def clean_for_tts(text):
-    """Limpia bloques de código, URLs y símbolos para una locución fluida de Google TTS"""
     if not text:
         return ""
     text = re.sub(r'```[\s\S]*?```', ' He generado el código en pantalla. ', text)
@@ -367,14 +364,11 @@ def clean_for_tts(text):
     return text
 
 def speak_termux_api(text):
-    """Habla usando Termux:API TTS con la voz de Google TTS de Android"""
     if not text:
         return
     clean_text = clean_for_tts(text)
     if not clean_text or len(clean_text) < 3:
         return
-    
-    # 1. Broadcast directo a Android TTS
     try:
         escaped_text = clean_text.replace('"', '\\"').replace("'", "")
         cmd = f'am broadcast --user 0 -a com.termux.api.action.TTS_SPEAK -n com.termux.api/.TermuxApiReceiver --es text "{escaped_text}"'
@@ -382,26 +376,48 @@ def speak_termux_api(text):
         return
     except Exception:
         pass
-
-    # 2. Fallback termux-tts-speak
     try:
         subprocess.Popen(["termux-tts-speak", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return
     except Exception:
         pass
-
-    # 3. Fallback espeak
     try:
         subprocess.Popen(["espeak", "-v", "es", "-s", "160", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
 
+def get_voice_input_auto():
+    """Llama al reconocedor de voz de Android y captura el texto automáticamente"""
+    print(f"{C_YELLOW}🎙️  Abriendo micrófono de Android... ¡Habla ahora!{C_RESET}")
+    
+    # 1. Intentar con termux-dialog speech (dialogo oficial)
+    try:
+        res = subprocess.run(["termux-dialog", "speech", "-t", "Habla tu instrucción para OpenCode"], capture_output=True, text=True, timeout=15)
+        if res.returncode == 0 and res.stdout.strip():
+            data = json.loads(res.stdout)
+            text = data.get("text", "").strip()
+            if text:
+                return text
+    except Exception:
+        pass
+
+    # 2. Fallback: Intent directo de reconocimiento de voz por Android Root
+    try:
+        subprocess.run(["su", "-c", "am start -a android.speech.action.RECOGNIZE_SPEECH"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(1)
+    except Exception:
+        pass
+
+    # 3. Entrada manual o dictado por teclado si no capturó
+    sys.stdout.write(f"\n{C_GREEN}🗣️  Tú (o presiona Enter si ya dictaste): {C_RESET}")
+    sys.stdout.flush()
+    fallback_input = sys.stdin.readline().strip()
+    return fallback_input
+
 def start_voice_response_daemon():
-    """Monitorea los mensajes de OpenCode y los habla en voz alta automáticamente en tiempo real"""
     def monitor_loop():
         data_dir = os.path.expanduser("~/.local/share/opencode")
         seen_messages = set()
-        
         while True:
             time.sleep(1.2)
             try:
@@ -422,7 +438,6 @@ def start_voice_response_daemon():
                         pass
             except Exception:
                 pass
-
     t = threading.Thread(target=monitor_loop, daemon=True)
     t.start()
 
@@ -460,7 +475,6 @@ def build_full_system_context():
         pass
 
     ctx.append("\n=================== CATÁLOGO DE COMANDOS TERMUX:API DISPONIBLES ===================")
-    ctx.append("Puedes usar y llamar a estas herramientas de Android directamente desde la terminal:")
     ctx.append("• 📋 Portapapeles: `termux-clipboard-get`, `termux-clipboard-set <texto>`")
     ctx.append("• 🔋 Hardware: `termux-battery-status`, `termux-torch on/off`, `termux-vibrate -d 500`, `termux-sensor -s`")
     ctx.append("• 📷 Cámara: `termux-camera-info`, `termux-camera-photo <ruta.jpg>`")
@@ -468,7 +482,7 @@ def build_full_system_context():
     ctx.append("• 🔔 Notificaciones: `termux-notification -t 'T' -c 'C'`, `termux-toast <texto>`, `termux-dialog confirm`")
     ctx.append("• 📶 Conectividad: `termux-wifi-connectioninfo`, `termux-wifi-scaninfo`")
     ctx.append("• 📞 Telefonía: `termux-telephony-deviceinfo`, `termux-sms-inbox`, `termux-sms-send -n <num> <msg>`")
-    ctx.append("• 🗣️ Audio & Voz TTS: `termux-tts-speak <texto>` (o `am broadcast -a com.termux.api.action.TTS_SPEAK --es text '<texto>'`)")
+    ctx.append("• 🗣️ Audio & Voz TTS: `termux-tts-speak <texto>`")
 
     ctx.append("\n=================== SCRIPTS Y UTILIDADES LOCALES ===================")
     home = os.path.expanduser("~")
@@ -515,7 +529,7 @@ def build_full_system_context():
 
 def main():
     print(f"{C_CYAN}╭────────────────────────────────────────────────────────╮{C_RESET}")
-    print(f"{C_CYAN}│   🎙️  OPENCODE TOTAL VOICE & CONTEXT AGENT (AI)   ⚡   │{C_RESET}")
+    print(f"{C_CYAN}│   🎙️  OPENCODE AUTO-VOICE AGENT (ANDROID AI)     ⚡   │{C_RESET}")
     print(f"{C_CYAN}╰────────────────────────────────────────────────────────╯{C_RESET}\n")
 
     if "--auth" in sys.argv or "auth" in sys.argv or "--providers" in sys.argv:
@@ -524,21 +538,19 @@ def main():
 
     start_voice_response_daemon()
 
-    full_context = build_full_system_context()
-    
-    print(f"{C_MAGENTA}🧠 Contexto Vivo del Sistema Recolectado:{C_RESET}")
-    print(f"{C_DIM}{full_context}{C_RESET}\n")
-
-    print(f"{C_YELLOW}🎤 Toca el micrófono de tu teclado para dictar o escribe tu orden:{C_RESET}\n")
-    sys.stdout.write(f"{C_GREEN}🗣️  Tú: {C_RESET}")
-    sys.stdout.flush()
-    user_prompt = sys.stdin.readline().strip()
+    # 1. Llamar automáticamente al reconocedor de voz de Android
+    user_prompt = get_voice_input_auto()
 
     if not user_prompt:
-        print(f"{C_RED}⚠️ No se ingresó ninguna instrucción.{C_RESET}")
+        print(f"{C_RED}⚠️ No se detectó ninguna instrucción de voz.{C_RESET}")
         sys.exit(0)
 
-    # DIRECTIVA DE VOZ TOTAL Y OBLIGATORIA EN EL PROMPT
+    print(f"\n{C_GREEN}🗣️  Detectado por Voz: {C_WHITE}{user_prompt}{C_RESET}\n")
+
+    # 2. Recolectar contexto
+    full_context = build_full_system_context()
+
+    # 3. Prompt Maestro
     master_prompt = f"""[DIRECTIVA OBLIGATORIA DE VOZ Y LOCUCIÓN]:
 ¡HABLA ABSOLUTAMENTE TODO! Eres un asistente de voz interactivo en Termux Android.
 CADA VEZ que respondas o ejecutes un comando, DEBES HABLARLE al usuario.
@@ -558,9 +570,8 @@ Usa `termux-tts-speak "tu mensaje hablado"` o el canal de audio del sistema cuan
 
     set_clipboard(master_prompt)
 
-    print(f"\n{C_GREEN}📋 Prompt maestro con directiva de voz total copiado al portapapeles.{C_RESET}")
-    print(f"{C_BLUE}🚀 Abriendo OpenCode con Voz Total Activa...{C_RESET}\n")
-    speak_termux_api("Abriendo OpenCode con voz total activa")
+    print(f"{C_BLUE}🚀 Enviando a OpenCode y abriendo sesión interactiva...{C_RESET}\n")
+    speak_termux_api(f"Procesando {user_prompt}")
 
     prompt_file = os.path.expanduser("~/.opencode_last_prompt.txt")
     with open(prompt_file, "w") as f:

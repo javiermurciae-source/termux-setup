@@ -89,7 +89,7 @@ step_packages() {
     pkg install -y glibc proot 2>/dev/null
     
     # Herramientas generales + Root + ADB
-    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang alpine 2>/dev/null
+    pkg install -y fish git curl fzf sqlite cowsay nyancat termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang alpine espeak 2>/dev/null
     
     ok "Paquetes instalados (incluyendo sudo/tsu y ADB)"
 }
@@ -328,7 +328,7 @@ step_core_termux() {
 """
 🎙️ OPENCODE VOICE & CONTEXT SUITE (Termux AI Agent)
 - Entrada por Voz (Micrófono Teclado)
-- Salida por Voz Hablada (TTS de Android con termux-tts-speak) al responder
+- Salida por Voz Hablada en Español (espeak nativo + termux-tts-speak)
 - Control total de Hardware vía Termux:API (Cámara, GPS, Linterna, Batería, SMS, Toast)
 - Contexto vivo del sistema y scripts locales
 """
@@ -351,41 +351,36 @@ C_DIM = "\033[2;37m"
 C_RESET = "\033[0m"
 
 def clean_markdown_for_speech(text):
-    """Limpia bloques de código, markdown y caracteres especiales para que suene natural en voz alta"""
+    """Limpia bloques de código y markdown para que suene natural en voz alta"""
     if not text:
         return ""
-    # Quitar bloques de código
-    text = re.sub(r'```[\s\S]*?```', 'He generado el bloque de código en pantalla.', text)
-    # Quitar enlaces http
-    text = re.sub(r'https?://\S+', 'enlace web', text)
-    # Quitar formato markdown (#, *, `, _)
-    text = re.sub(r'[#*_`~>|]', '', text)
-    # Quitar múltiples saltos de línea
+    text = re.sub(r'```[\s\S]*?```', 'He generado el código en pantalla.', text)
+    text = re.sub(r'https?://\S+', 'un enlace web', text)
+    text = re.sub(r'[#*_`~>|┌┐└┘├┤│─]', '', text)
     text = ' '.join(text.split())
-    # Limitar longitud para no saturar el sintetizador
-    if len(text) > 400:
-        text = text[:400] + "... y otros detalles que puedes ver en pantalla."
+    if len(text) > 350:
+        text = text[:350] + "... y los demás detalles están en pantalla."
     return text
 
 def speak(text):
-    """Sintetiza y habla texto en voz alta por el altavoz de Android usando termux-tts-speak"""
+    """Habla la respuesta en español por el altavoz"""
     if not text:
         return
     clean_text = clean_markdown_for_speech(text)
     if not clean_text:
         return
     
-    # 1. Hablar con termux-tts-speak
+    # 1. Intentar espeak nativo en español (rápido y garantizado)
     try:
-        subprocess.Popen(["termux-tts-speak", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(["espeak", "-v", "es", "-s", "160", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return
     except Exception:
         pass
 
-    # 2. Fallback Root Intent
+    # 2. Intentar termux-tts-speak
     try:
-        cmd = f"am start -a android.intent.action.QUICK_VIEW -d 'text:{clean_text[:200]}'"
-        subprocess.run(["su", "-c", cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(["termux-tts-speak", "-l", "es", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return
     except Exception:
         pass
 
@@ -425,7 +420,7 @@ def build_full_system_context():
     ctx.append("• 🔔 Notificaciones: `termux-notification -t 'T' -c 'C'`, `termux-toast <texto>`, `termux-dialog confirm`")
     ctx.append("• 📶 Conectividad: `termux-wifi-connectioninfo`, `termux-wifi-scaninfo`")
     ctx.append("• 📞 Telefonía: `termux-telephony-deviceinfo`, `termux-sms-inbox`, `termux-sms-send -n <num> <msg>`")
-    ctx.append("• 🗣️ Audio & Voz: `termux-tts-speak <texto>`")
+    ctx.append("• 🗣️ Audio & Voz: `termux-tts-speak <texto>` o `espeak -v es <texto>`")
 
     ctx.append("\n=================== SCRIPTS Y UTILIDADES LOCALES ===================")
     home = os.path.expanduser("~")
@@ -507,13 +502,12 @@ Tienes a tu disposición el hardware del teléfono a través de Termux:API, acce
 2. Si el usuario te pide consultar correos o cuentas, usa el contexto de `readmail` e IMAP.
 3. Responde de forma concisa, técnica, precisa y accionable en Markdown."""
 
-    print(f"\n{C_BLUE}🤖 Ejecutando OpenCode y capturando respuesta por voz...{C_RESET}\n")
+    print(f"\n{C_BLUE}🤖 Ejecutando OpenCode y procesando respuesta...{C_RESET}\n")
 
     opencode_bin = "/data/data/com.termux/files/usr/bin/opencode"
     if os.path.exists(opencode_bin):
         cmd = [opencode_bin, "run", master_prompt]
         try:
-            # Ejecutar y capturar en vivo mientras se muestra por pantalla
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
             output_lines = []
             for line in proc.stdout:
@@ -524,7 +518,7 @@ Tienes a tu disposición el hardware del teléfono a través de Termux:API, acce
             
             full_response = "".join(output_lines)
             
-            # Hablar la respuesta por el altavoz de Termux usando TTS
+            # Hablar la respuesta por el altavoz
             if full_response.strip():
                 speak(full_response)
 

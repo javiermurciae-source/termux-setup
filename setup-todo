@@ -132,7 +132,7 @@ EOF
     fi
 
     # Enlaces globales
-    for bin in fastfetch cmatrix sigye kitten setup-nvim; do
+    for bin in sigye kitten setup-nvim; do
         if [ -f "$HOME_DIR/.local/bin/$bin" ]; then
             ln -sf "$HOME_DIR/.local/bin/$bin" "$PREFIX/bin/$bin"
         fi

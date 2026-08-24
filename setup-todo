@@ -329,6 +329,7 @@ step_core_termux() {
 🎙️ OPENCODE TOTAL VOICE & CONTEXT SUITE (Termux AI Agent)
 - Entrada por Voz (Micrófono Teclado)
 - Salida por Voz Hablada CONTINUA Y TOTAL con Termux:API TTS (Google TTS)
+- Inyección Directa de Voz en el Prompt del Agente (Obliga a ejecutar `termux-tts-speak` o `am broadcast` en cada respuesta)
 - Monitoreo en segundo plano de la sesión para hablar CADA RESPUESTA que dé OpenCode
 - Control total de Hardware vía Termux:API
 - Contexto vivo del sistema, scripts, IMAP y portapapeles
@@ -357,15 +358,10 @@ def clean_for_tts(text):
     """Limpia bloques de código, URLs y símbolos para una locución fluida de Google TTS"""
     if not text:
         return ""
-    # Reemplazar bloques de código por frase corta
     text = re.sub(r'```[\s\S]*?```', ' He generado el código en pantalla. ', text)
-    # Reemplazar enlaces
     text = re.sub(r'https?://\S+', ' un enlace web ', text)
-    # Quitar caracteres especiales y markdown
     text = re.sub(r'[#*_`~>|┌┐└┘├┤│─╭╮╰╯═]', '', text)
-    # Unificar espacios
     text = ' '.join(text.split())
-    # Limitar longitud para lectura de voz óptima
     if len(text) > 450:
         text = text[:450] + "... y los demás detalles están en pantalla."
     return text
@@ -378,7 +374,7 @@ def speak_termux_api(text):
     if not clean_text or len(clean_text) < 3:
         return
     
-    # 1. Ejecutar broadcast directo al receiver de Termux:API
+    # 1. Broadcast directo a Android TTS
     try:
         escaped_text = clean_text.replace('"', '\\"').replace("'", "")
         cmd = f'am broadcast --user 0 -a com.termux.api.action.TTS_SPEAK -n com.termux.api/.TermuxApiReceiver --es text "{escaped_text}"'
@@ -403,20 +399,17 @@ def speak_termux_api(text):
 def start_voice_response_daemon():
     """Monitorea los mensajes de OpenCode y los habla en voz alta automáticamente en tiempo real"""
     def monitor_loop():
-        # Directorio de datos y logs de OpenCode
         data_dir = os.path.expanduser("~/.local/share/opencode")
         seen_messages = set()
         
         while True:
-            time.sleep(1.5)
+            time.sleep(1.2)
             try:
-                # Buscar archivos de sesión recientes o base de datos sqlite/json
                 json_files = glob.glob(f"{data_dir}/**/*.json", recursive=True)
                 for jf in sorted(json_files, key=os.path.getmtime, reverse=True)[:3]:
                     try:
                         with open(jf, "r") as f:
                             data = json.load(f)
-                            # Si es estructura de mensajes
                             if isinstance(data, list):
                                 for msg in data:
                                     if isinstance(msg, dict) and msg.get("role") == "assistant":
@@ -475,7 +468,7 @@ def build_full_system_context():
     ctx.append("• 🔔 Notificaciones: `termux-notification -t 'T' -c 'C'`, `termux-toast <texto>`, `termux-dialog confirm`")
     ctx.append("• 📶 Conectividad: `termux-wifi-connectioninfo`, `termux-wifi-scaninfo`")
     ctx.append("• 📞 Telefonía: `termux-telephony-deviceinfo`, `termux-sms-inbox`, `termux-sms-send -n <num> <msg>`")
-    ctx.append("• 🗣️ Audio & Voz: `termux-tts-speak <texto>` (Google TTS Android)")
+    ctx.append("• 🗣️ Audio & Voz TTS: `termux-tts-speak <texto>` (o `am broadcast -a com.termux.api.action.TTS_SPEAK --es text '<texto>'`)")
 
     ctx.append("\n=================== SCRIPTS Y UTILIDADES LOCALES ===================")
     home = os.path.expanduser("~")
@@ -529,7 +522,6 @@ def main():
         os.system("opencode auth")
         sys.exit(0)
 
-    # Iniciar motor de voz en segundo plano
     start_voice_response_daemon()
 
     full_context = build_full_system_context()
@@ -546,33 +538,34 @@ def main():
         print(f"{C_RED}⚠️ No se ingresó ninguna instrucción.{C_RESET}")
         sys.exit(0)
 
-    master_prompt = f"""[ROL Y ENTORNO DEL AGENTE]:
-Eres un asistente de ingeniería y automatización experto ejecutándote en un entorno Termux real en Android (Infinix ARM64).
-Tienes a tu disposición el hardware del teléfono a través de Termux:API, acceso Root (su/tsu), scripts locales y suite de pentesting/desarrollo.
-IMPORTANTE: Cada respuesta que des será sintetizada en voz alta por el motor TTS de Android, así que incluye un resumen claro y hablado al inicio de tu respuesta.
+    # DIRECTIVA DE VOZ TOTAL Y OBLIGATORIA EN EL PROMPT
+    master_prompt = f"""[DIRECTIVA OBLIGATORIA DE VOZ Y LOCUCIÓN]:
+¡HABLA ABSOLUTAMENTE TODO! Eres un asistente de voz interactivo en Termux Android.
+CADA VEZ que respondas o ejecutes un comando, DEBES HABLARLE al usuario.
+Para hablar, además de escribir tu respuesta en pantalla, debes ejecutar la herramienta de TTS o incluir un resumen claro al principio para que el sistema de voz lo lea en voz alta.
+Usa `termux-tts-speak "tu mensaje hablado"` o el canal de audio del sistema cuando ejecutes comandos para que el usuario te escuche hablar mientras trabajas.
 
+[ENTORNO DEL SISTEMA Y HARDWARE]:
 {full_context}
 
 [INSTRUCCIÓN DEL USUARIO]:
 {user_prompt}
 
-[INSTRUCCIONES DE RESPUESTA]:
-1. Si el usuario te pide interactuar con el hardware (linterna, vibración, batería, portapapeles, SMS, notificaciones, cámara, ubicación), usa o genera los comandos exactos de `termux-*` listados arriba.
-2. Si el usuario te pide consultar correos o cuentas, usa el contexto de `readmail` e IMAP.
-3. Responde de forma concisa, técnica, precisa y accionable en Markdown."""
+[REGLAS DE OPERACIÓN]:
+1. Si el usuario pide interactuar con el hardware (linterna, vibración, batería, cámara, ubicación, portapapeles, SMS), ejecuta los comandos correspondientes de Termux:API (`termux-torch`, `termux-vibrate`, `termux-battery-status`, etc.).
+2. Si pide revisar correos, usa el script `readmail` o IMAP.
+3. Habla de forma natural, fluida, segura y ejecutiva."""
 
     set_clipboard(master_prompt)
 
-    print(f"\n{C_GREEN}📋 Prompt maestro copiado al portapapeles.{C_RESET}")
-    print(f"{C_BLUE}🚀 Abriendo OpenCode con Voz Continua Activa...{C_RESET}\n")
-    speak_termux_api("Abriendo OpenCode con voz activa")
+    print(f"\n{C_GREEN}📋 Prompt maestro con directiva de voz total copiado al portapapeles.{C_RESET}")
+    print(f"{C_BLUE}🚀 Abriendo OpenCode con Voz Total Activa...{C_RESET}\n")
+    speak_termux_api("Abriendo OpenCode con voz total activa")
 
-    # Guardar prompt para OpenCode
     prompt_file = os.path.expanduser("~/.opencode_last_prompt.txt")
     with open(prompt_file, "w") as f:
         f.write(master_prompt)
 
-    # Iniciar la interfaz TUI de OpenCode interactiva
     os.system(f"opencode --prompt \"$(cat ~/.opencode_last_prompt.txt)\"")
 
 if __name__ == "__main__":

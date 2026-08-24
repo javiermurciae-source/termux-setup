@@ -327,14 +327,10 @@ step_core_termux() {
 #!/data/data/com.termux/files/usr/bin/python3
 """
 🎙️ OPENCODE VOICE & CONTEXT SUITE (Termux AI Agent)
-Generador de Contexto Real Maestro:
-- Arquitectura del sistema, hardware, OS y permisos Root/APatch
-- Catálogo completo con lujo de detalles de TODAS las APIs de Termux:API (Hardware, Sensores, SMS, Cámara, GPS, TTS, Diálogos, Linterna)
-- Catálogo vivo de herramientas CLI instaladas y cómo ejecutarlas
-- Scripts locales en Home con descripción de su función
-- Cuentas IMAP configuradas y estado de red/batería
-- Contenido del portapapeles
-- Inyección de System Prompt Maestro para OpenCode
+- Entrada por Voz (Micrófono Teclado)
+- Salida por Voz Hablada (TTS de Android con termux-tts-speak) al responder
+- Control total de Hardware vía Termux:API (Cámara, GPS, Linterna, Batería, SMS, Toast)
+- Contexto vivo del sistema y scripts locales
 """
 
 import subprocess
@@ -342,6 +338,7 @@ import os
 import sys
 import json
 import time
+import re
 
 C_CYAN = "\033[1;36m"
 C_BLUE = "\033[1;34m"
@@ -353,12 +350,42 @@ C_WHITE = "\033[1;37m"
 C_DIM = "\033[2;37m"
 C_RESET = "\033[0m"
 
+def clean_markdown_for_speech(text):
+    """Limpia bloques de código, markdown y caracteres especiales para que suene natural en voz alta"""
+    if not text:
+        return ""
+    # Quitar bloques de código
+    text = re.sub(r'```[\s\S]*?```', 'He generado el bloque de código en pantalla.', text)
+    # Quitar enlaces http
+    text = re.sub(r'https?://\S+', 'enlace web', text)
+    # Quitar formato markdown (#, *, `, _)
+    text = re.sub(r'[#*_`~>|]', '', text)
+    # Quitar múltiples saltos de línea
+    text = ' '.join(text.split())
+    # Limitar longitud para no saturar el sintetizador
+    if len(text) > 400:
+        text = text[:400] + "... y otros detalles que puedes ver en pantalla."
+    return text
+
 def speak(text):
+    """Sintetiza y habla texto en voz alta por el altavoz de Android usando termux-tts-speak"""
     if not text:
         return
-    clean_text = text.replace('"', '').replace("'", "").replace('\n', ' ')[:300]
+    clean_text = clean_markdown_for_speech(text)
+    if not clean_text:
+        return
+    
+    # 1. Hablar con termux-tts-speak
     try:
-        subprocess.run(["termux-tts-speak", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+        subprocess.Popen(["termux-tts-speak", clean_text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return
+    except Exception:
+        pass
+
+    # 2. Fallback Root Intent
+    try:
+        cmd = f"am start -a android.intent.action.QUICK_VIEW -d 'text:{clean_text[:200]}'"
+        subprocess.run(["su", "-c", cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
 
@@ -378,11 +405,9 @@ def build_full_system_context():
     ctx.append("• Dispositivo: Android / Infinix X6878 (ARM64-v8a)")
     ctx.append("• Entorno Shell: Termux + Fish Shell (PickleHik3 Termux Launcher)")
     
-    # 1. Permisos Root
     has_root = os.path.exists("/system/bin/su") or os.path.exists("/data/data/com.termux/files/usr/bin/tsu")
     ctx.append(f"• Acceso Superusuario (Root): {'SI (APatch/Magisk disponible vía `su` / `tsu`)' if has_root else 'NO'}")
 
-    # 2. Batería en vivo
     try:
         bat = subprocess.run(["termux-battery-status"], capture_output=True, text=True, timeout=1)
         if bat.returncode == 0:
@@ -393,40 +418,16 @@ def build_full_system_context():
 
     ctx.append("\n=================== CATÁLOGO DE COMANDOS TERMUX:API DISPONIBLES ===================")
     ctx.append("Puedes usar y llamar a estas herramientas de Android directamente desde la terminal:")
-    ctx.append("• 📋 Portapapeles:")
-    ctx.append("    - `termux-clipboard-get`: Lee el portapapeles de Android.")
-    ctx.append("    - `termux-clipboard-set <texto>`: Escribe texto en el portapapeles.")
-    ctx.append("• 🔋 Hardware, Sensores & Linterna:")
-    ctx.append("    - `termux-battery-status`: Obtiene porcentaje, salud, voltaje y estado de carga.")
-    ctx.append("    - `termux-sensor -s` / `termux-sensor -n <sensor>`: Lee datos de sensores en tiempo real.")
-    ctx.append("    - `termux-torch on` / `termux-torch off`: Enciende o apaga la linterna física.")
-    ctx.append("    - `termux-vibrate -d <ms>`: Hace vibrar el teléfono por X milisegundos (ej: `-d 500`).")
-    ctx.append("• 📷 Cámara:")
-    ctx.append("    - `termux-camera-info`: Lista las cámaras frontal/trasera.")
-    ctx.append("    - `termux-camera-photo <ruta.jpg>`: Toma una fotografía con la cámara.")
-    ctx.append("• 📍 Ubicación:")
-    ctx.append("    - `termux-location`: Obtiene las coordenadas GPS exactas (latitud, longitud, altitud).")
-    ctx.append("• 🔔 Notificaciones & Diálogos:")
-    ctx.append("    - `termux-notification -t 'Título' -c 'Contenido'`: Muestra una notificación en la barra de Android.")
-    ctx.append("    - `termux-notification-remove <id>`: Elimina una notificación por su ID.")
-    ctx.append("    - `termux-toast <texto>`: Muestra un mensaje emergente Toast en la pantalla.")
-    ctx.append("    - `termux-dialog [confirm|text|radio|sheet|speech]`: Abre ventanas de diálogo nativas de Android.")
-    ctx.append("    - `termux-storage-get <archivo>`: Solicita al usuario un archivo con el selector nativo.")
-    ctx.append("• 📶 Conectividad & Red:")
-    ctx.append("    - `termux-wifi-connectioninfo`: Muestra SSID, IP, BSSID y velocidad de enlace Wi-Fi.")
-    ctx.append("    - `termux-wifi-scaninfo`: Escanea las redes Wi-Fi cercanas.")
-    ctx.append("• 📞 Telefonía & SMS:")
-    ctx.append("    - `termux-telephony-deviceinfo`: Información IMEI, SIM y operador.")
-    ctx.append("    - `termux-telephony-cellinfo`: Información de antenas celulares.")
-    ctx.append("    - `termux-sms-inbox`: Lista los mensajes SMS recibidos.")
-    ctx.append("    - `termux-sms-send -n <numero> <mensaje>`: Envía un SMS.")
-    ctx.append("• 🗣️ Audio & TTS:")
-    ctx.append("    - `termux-tts-speak <texto>`: Sintetiza y habla texto en voz alta por el altavoz.")
-    ctx.append("    - `termux-media-scan <archivo>`: Notifica al sistema para escanear multimedia.")
+    ctx.append("• 📋 Portapapeles: `termux-clipboard-get`, `termux-clipboard-set <texto>`")
+    ctx.append("• 🔋 Hardware: `termux-battery-status`, `termux-torch on/off`, `termux-vibrate -d 500`, `termux-sensor -s`")
+    ctx.append("• 📷 Cámara: `termux-camera-info`, `termux-camera-photo <ruta.jpg>`")
+    ctx.append("• 📍 Ubicación: `termux-location` (GPS)")
+    ctx.append("• 🔔 Notificaciones: `termux-notification -t 'T' -c 'C'`, `termux-toast <texto>`, `termux-dialog confirm`")
+    ctx.append("• 📶 Conectividad: `termux-wifi-connectioninfo`, `termux-wifi-scaninfo`")
+    ctx.append("• 📞 Telefonía: `termux-telephony-deviceinfo`, `termux-sms-inbox`, `termux-sms-send -n <num> <msg>`")
+    ctx.append("• 🗣️ Audio & Voz: `termux-tts-speak <texto>`")
 
     ctx.append("\n=================== SCRIPTS Y UTILIDADES LOCALES ===================")
-    
-    # 3. Scripts en Home y su función
     home = os.path.expanduser("~")
     script_descriptions = {
         "readmail": "Lector IMAP interactivo de correos Gmail/Dominio con tarjetas ANSI (alias `mail` / `leer-correo.sh`)",
@@ -448,7 +449,6 @@ def build_full_system_context():
         ctx.append("📁 Scripts en el directorio Home (~/):")
         ctx.extend(found_scripts if found_scripts else ["  - Ninguno"])
 
-    # 4. Cuentas de Correo
     mail_cfg = os.path.expanduser("~/.config/mail_accounts.json")
     if os.path.exists(mail_cfg):
         try:
@@ -459,15 +459,11 @@ def build_full_system_context():
         except Exception:
             pass
 
-    # 5. Suite de Pentesting, Red y Reversing instalada
     ctx.append("\n🛠️ Herramientas CLI del Ecosistema:")
-    ctx.append("  - Red & Sniffing: `nmap`, `tcpdump`, `tshark` (Wireshark CLI), `whois`, `dnsutils`")
-    ctx.append("  - Fuzzing & Web: `ffuf` (Go), `SecLists` (~/wordlists/SecLists), `whatweb`, `curl`")
-    ctx.append("  - Reversing Android & Java: `jadx` (descompilador APK), `apktool`, `openjdk-17`, `gradle`")
-    ctx.append("  - Utilidades Terminal: `fzf`, `yazi` (explorador de archivos), `eza`, `fastfetch`, `cowsay`, `nyancat`")
-    ctx.append("  - Agentes IA CLI: `opencode`, `agy` (Antigravity), `kilo` (KiloCode), `keelcode`, `qwen`, `cline`")
+    ctx.append("  - Red & Pentesting: `nmap`, `tcpdump`, `tshark`, `whois`, `dnsutils`, `ffuf`, `SecLists`, `whatweb`")
+    ctx.append("  - Reversing: `jadx`, `apktool`, `openjdk-17`, `gradle`")
+    ctx.append("  - Agentes IA: `opencode`, `agy`, `kilo`, `keelcode`, `qwen`, `cline`")
 
-    # 6. Portapapeles
     clip = get_clipboard()
     if clip:
         ctx.append(f"\n📋 Contenido Actual del Portapapeles (Android Clipboard):\n\"\"\"\n{clip}\n\"\"\"")
@@ -483,7 +479,6 @@ def main():
         os.system("opencode auth")
         sys.exit(0)
 
-    # Construir el dossier de contexto real
     full_context = build_full_system_context()
     
     print(f"{C_MAGENTA}🧠 Contexto Vivo del Sistema Recolectado:{C_RESET}")
@@ -498,7 +493,6 @@ def main():
         print(f"{C_RED}⚠️ No se ingresó ninguna instrucción.{C_RESET}")
         sys.exit(0)
 
-    # Prompt Maestro Estructurado
     master_prompt = f"""[ROL Y ENTORNO DEL AGENTE]:
 Eres un asistente de ingeniería y automatización experto ejecutándote en un entorno Termux real en Android (Infinix ARM64).
 Tienes a tu disposición el hardware del teléfono a través de Termux:API, acceso Root (su/tsu), scripts locales y suite de pentesting/desarrollo.
@@ -513,18 +507,31 @@ Tienes a tu disposición el hardware del teléfono a través de Termux:API, acce
 2. Si el usuario te pide consultar correos o cuentas, usa el contexto de `readmail` e IMAP.
 3. Responde de forma concisa, técnica, precisa y accionable en Markdown."""
 
-    print(f"\n{C_BLUE}🤖 Transfiriendo instrucción y contexto maestro a OpenCode...{C_RESET}\n")
-    speak("Analizando con OpenCode")
+    print(f"\n{C_BLUE}🤖 Ejecutando OpenCode y capturando respuesta por voz...{C_RESET}\n")
 
     opencode_bin = "/data/data/com.termux/files/usr/bin/opencode"
     if os.path.exists(opencode_bin):
-        cmd = [opencode_bin, "--prompt", master_prompt]
+        cmd = [opencode_bin, "run", master_prompt]
         try:
-            subprocess.run(cmd)
+            # Ejecutar y capturar en vivo mientras se muestra por pantalla
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            output_lines = []
+            for line in proc.stdout:
+                sys.stdout.write(line)
+                sys.stdout.flush()
+                output_lines.append(line)
+            proc.wait()
+            
+            full_response = "".join(output_lines)
+            
+            # Hablar la respuesta por el altavoz de Termux usando TTS
+            if full_response.strip():
+                speak(full_response)
+
         except Exception as e:
             print(f"{C_RED}❌ Error ejecutando OpenCode:{C_RESET} {e}")
     else:
-        os.system(f"opencode --prompt '{master_prompt}' 2>/dev/null || agy '{user_prompt}'")
+        os.system(f"opencode run '{master_prompt}' 2>/dev/null || agy '{user_prompt}'")
 
 if __name__ == "__main__":
     main()

@@ -30,16 +30,12 @@ banner() {
 preguntar_servicio() {
     echo -e "${C_YELLOW}Selecciona la plataforma de streaming:${C_RESET}\n"
     echo -e "  ${C_CYAN}[1]${C_RESET} ${C_BOLD}🎬 Netflix${C_RESET}"
-    echo -e "  ${C_CYAN}[2]${C_RESET} ${C_BOLD}✨ Disney+${C_RESET}"
-    echo -e "  ${C_CYAN}[3]${C_RESET} ${C_BOLD}👑 Max / HBO${C_RESET}"
-    echo -e "  ${C_CYAN}[4]${C_RESET} ${C_BOLD}📦 Prime Video${C_RESET}\n"
+    echo -e "  ${C_CYAN}[2]${C_RESET} ${C_BOLD}✨ Disney+${C_RESET}\n"
     
-    echo -ne "${C_GREEN}👉 Opción [1-4, defecto: 1 (Netflix)]: ${C_RESET}"
+    echo -ne "${C_GREEN}👉 Opción [1-2, defecto: 1 (Netflix)]: ${C_RESET}"
     read -r opcion
     case "$opcion" in
         2) servicio="disney_plus"; nombre_servicio="Disney+" ;;
-        3) servicio="max";         nombre_servicio="Max (HBO)" ;;
-        4) servicio="prime_video"; nombre_servicio="Prime Video" ;;
         *) servicio="netflix";     nombre_servicio="Netflix" ;;
     esac
 }
@@ -130,15 +126,13 @@ if [[ $# -ge 1 ]]; then
     servicio="netflix"
     nombre_servicio="Netflix"
     case "$1" in
-        n|netflix)            servicio="netflix";     nombre_servicio="Netflix";     correo="${2:-}" ;;
-        d|disney|disney_plus) servicio="disney_plus"; nombre_servicio="Disney+";     correo="${2:-}" ;;
-        m|max|hbo)            servicio="max";         nombre_servicio="Max";         correo="${2:-}" ;;
-        p|prime)              servicio="prime_video"; nombre_servicio="Prime Video"; correo="${2:-}" ;;
+        n|netflix)            servicio="netflix";     nombre_servicio="Netflix"; correo="${2:-}" ;;
+        d|disney|disney_plus) servicio="disney_plus"; nombre_servicio="Disney+"; correo="${2:-}" ;;
         *)                    correo="$1" ;;
     esac
     
     if ! [[ "$correo" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-        echo -e "${C_RED}Uso rápido: codc [n|d|m|p] <correo>${C_RESET}" >&2
+        echo -e "${C_RED}Uso rápido: codc [n|d] <correo>${C_RESET}" >&2
         exit 1
     fi
     

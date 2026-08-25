@@ -88,6 +88,7 @@ step_packages() {
     fi
     
     log 4.1 "Actualizando e instalando paquetes base, glibc y herramientas Root/ADB..."
+    dpkg --configure -a 2>/dev/null
     pkg update -y && pkg upgrade -y 2>/dev/null
     
     # Repositorios extra
@@ -98,7 +99,7 @@ step_packages() {
     pkg install -y glibc proot 2>/dev/null
     
     # Herramientas generales + Root + ADB
-    pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix glow sl nsnake speedtest-go termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils alpine espeak aapt aapt2 apksigner dx ecj 2>/dev/null
+    pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix glow sl nsnake speedtest-go termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils alpine espeak aapt aapt2 apksigner dx ecj patchelf wget lsd 2>/dev/null
     
     ok "Paquetes instalados (incluyendo sudo/tsu y ADB)"
 }
@@ -167,7 +168,8 @@ FISH_GREETING
 alias ll='ls -la'
 alias ..='cd ..'
 alias cls='clear'
-alias update='pkg update -y && pkg upgrade -y'
+alias update='dpkg --configure -a 2>/dev/null
+    pkg update -y && pkg upgrade -y'
 alias horario='bash ~/horario.sh'
 alias tetris='python ~/tetris.py'
 alias snake='nsnake'

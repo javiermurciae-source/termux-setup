@@ -92,6 +92,7 @@
       "showIpv6": false,
       "showPrefixLen": false,
       "showLoop": false,
+      "namePrefix": "wlan",
       "format": "{ifname}: {ipv4}"
     }
   ]

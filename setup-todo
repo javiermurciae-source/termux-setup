@@ -98,7 +98,7 @@ step_packages() {
     pkg install -y glibc proot 2>/dev/null
     
     # Herramientas generales + Root + ADB
-    pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix glow sl nsnake speedtest-go termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils golang alpine espeak aapt aapt2 apksigner dx ecj 2>/dev/null
+    pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix glow sl nsnake speedtest-go termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils alpine espeak aapt aapt2 apksigner dx ecj 2>/dev/null
     
     ok "Paquetes instalados (incluyendo sudo/tsu y ADB)"
 }
@@ -1474,34 +1474,6 @@ INBOX_EOF
     else
         ok "WhatWeb ya está instalado. ¡Omitiendo descarga! ⚡"
     fi
-
-    # Herramientas de Fuzzing y Diccionarios
-    echo -e "\n\e[1;33m❓ ¿Deseas instalar el entorno de Fuzzing (Ffuf) y SecLists (~1GB)? [S/n]: \e[0m\c"
-    read -r -t 15 resp_fuzz </dev/tty
-    if [[ "$resp_fuzz" =~ ^([sS]|)$ ]] || [[ -z "$resp_fuzz" ]]; then
-        log 8.2 "Instalando Fuzzing (ffuf) y SecLists..."
-        if [ ! -d "$HOME_DIR/wordlists/SecLists" ]; then
-        mkdir -p "$HOME_DIR/wordlists"
-        warn "Descargando SecLists (~1GB). Mostrando progreso..."
-        git clone --progress --depth 1 https://github.com/danielmiessler/SecLists.git "$HOME_DIR/wordlists/SecLists"
-        ok "Diccionarios de SecLists descargados 📚"
-    else
-        ok "SecLists ya está descargado. ¡Omitiendo! ⚡"
-    fi
-
-    if [ ! -x "$PREFIX/bin/ffuf" ]; then
-        export GOPATH="$HOME_DIR/go"
-        warn "Compilando Ffuf en Go (Esto puede tardar un par de minutos)..."
-        warn "Compilando Ffuf (Go)..."
-        go install -v github.com/ffuf/ffuf/v2@latest
-        ln -sf "$GOPATH/bin/ffuf" "$PREFIX/bin/ffuf"
-        ok "Ffuf (Fuzzer ultrarrápido) instalado 🚀"
-    else
-        ok "Ffuf ya está instalado. ¡Omitiendo! ⚡"
-    fi
-    else
-        warn "Omitiendo instalación de Fuzzing y SecLists."
-    fi
 }
 
 
@@ -1565,7 +1537,7 @@ printf '  \e[34m🐟 Shell:\e[0m       Fish (default)\n'
 printf '  \e[34m🎨 Fastfetch:\e[0m   corre al abrir terminal\n'
 printf '  \e[34m🌟 Showcase:\e[0m    Fish + OhMyPosh + Neovim + eza\n'
 printf '  \e[34m⚡ Core-Termux:\e[0m  instalado\n'
-printf '  \e[34m🕵️ Recon & Fuzzing:\e[0m WhatWeb, Nmap, Ffuf y SecLists listos\n'
+printf '  \e[34m🕵️ Recon:\e[0m       WhatWeb, Nmap, SearchSploit listos\n'
 printf '  \e[34m🔬 Lab Avanzado:\e[0m    Java, Gradle, Apktool, tcpdump\n'
 printf '  \e[34m📬 Correo CLI:\e[0m   CLI-Inbox (Moderno para Gmail, comando: inbox / mail)\n'
 printf '  \e[34m📋 Scripts:\e[0m     horario · gif-selector · portapapeles\n'

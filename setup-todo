@@ -18,10 +18,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 fetch_file() {
     local src="$1"
     local dest="$2"
+    local url_src="${src// /%20}"
     if [ -f "$SCRIPT_DIR/$src" ]; then
         cp "$SCRIPT_DIR/$src" "$dest" 2>/dev/null
     else
-        curl -sL "https://raw.githubusercontent.com/javiermurciae-source/termux-setup/main/$src" -o "$dest" 2>/dev/null
+        curl -sL "https://raw.githubusercontent.com/javiermurciae-source/termux-setup/main/$url_src" -o "$dest" 2>/dev/null
     fi
     if [ ! -f "$dest" ]; then
         warn "No se pudo obtener: $src"

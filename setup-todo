@@ -100,7 +100,28 @@ step_packages() {
     
     # Herramientas generales + Root + ADB
     pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix glow sl nsnake speedtest-go termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils alpine espeak aapt aapt2 apksigner dx ecj patchelf wget lsd 2>/dev/null
-    
+
+    # ── 4b. GitHub CLI ─────────────────────────────────────
+    log 4b "Instalando GitHub CLI (gh)..."
+    if command -v gh >/dev/null 2>&1; then
+        ok "GitHub CLI ya está instalado ($(gh --version | head -n1 | cut -d' ' -f3)). ¡Omitiendo! ⚡"
+    else
+        pkg install -y gh 2>/dev/null || {
+            warn "gh no está en los repos; intentando desde TUR..."
+            pkg install -y tur-repo >/dev/null 2>&1
+            pkg update -y >/dev/null 2>&1
+            pkg install -y gh 2>/dev/null
+        }
+        if command -v gh >/dev/null 2>&1; then
+            ok "GitHub CLI instalado correctamente"
+            if [ ! -f "$HOME_DIR/.config/gh/hosts.yml" ]; then
+                warn "Ejecuta 'gh auth login' para iniciar sesión en GitHub"
+            fi
+        else
+            warn "No se pudo instalar GitHub CLI (puedes instalarlo luego con 'pkg install gh')"
+        fi
+    fi
+
     ok "Paquetes instalados (incluyendo sudo/tsu y ADB)"
 }
 

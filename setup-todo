@@ -229,7 +229,7 @@ step_termux_ui() {
         # Botonera extra-keys
         cat << 'EOF' > "$HOME_DIR/.termux/termux.properties"
 fullscreen=false
-extra-keys=[[{"key":"KEYBOARD","display":"󰥻","popup":{"key":"tool:terminal.select_at_cursor","display":"󱈅"}},{"key":"tool:pane.split_horizontal","display":"󰯌","popup":{"key":"tool:pane.split_vertical","display":"Split pane vertically"}},{"key":"tool:pane.kill_focused","display":"","popup":{"key":"tool:session.new","display":"New session"}},{"key":"tool:terminal.search_scrollback","display":"󱎸","popup":{"key":"tool:terminal.hints","display":"󰌹"}},{"key":"tool:workspace.picker","display":"","popup":{"key":"tool:clipboard.paste","display":"Paste"}},{"key":"tool:terminal.toggle_scratchpad","display":"󱞂","popup":{"key":"tool:pane.toggle_float","display":"󰹗"}}]]
+extra-keys=[[{"key":"tool:window.next","display":"☰","popup":{"key":"tool:window.previous","display":""}},{"key":"tool:pane.split_horizontal","display":"","popup":{"key":"tool:pane.split_vertical","display":""}},{"key":"tool:pane.kill_focused","display":"","popup":{"key":"tool:session.new","display":""}},{"key":"TAB","display":"","popup":"ESC"},{"key":"tool:workspace.picker","display":"","popup":"tool:terminal.select_all"},{"key":"tool:terminal.toggle_scratchpad","display":"","popup":"tool:terminal.select_url"},{"key":"KEYBOARD","display":"","popup":{"key":"tool:terminal.search_scrollback","display":""}}]]
 extra-keys2=[]
 EOF
 

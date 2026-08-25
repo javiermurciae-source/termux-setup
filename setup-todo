@@ -46,11 +46,9 @@ step_scripts() {
     log 1 "Copiando scripts personales..."
     mkdir -p "$HOME_DIR"
     for f in horario.sh verificar-cod.sh gif-selector.sh fzf_clipboard_scratchpad.sh; do
-        src="$SCRIPT_DIR/scripts/$f"
-        if [ -f "$src" ]; then
-            cp "$src" "$HOME_DIR/$f" && chmod +x "$HOME_DIR/$f" && ok "$f"
-        else
-            warn "No encontrado: scripts/$f"
+        fetch_file "scripts/$f" "$HOME_DIR/$f"
+        if [ -f "$HOME_DIR/$f" ]; then
+            chmod +x "$HOME_DIR/$f" && ok "$f"
         fi
     done
 }
@@ -60,12 +58,8 @@ step_fastfetch() {
     log 2 "Instalando config Fastfetch (config.jsonc + descargas.gif)..."
     mkdir -p "$HOME_DIR/.config/fastfetch"
     for f in config.jsonc descargas.gif; do
-        src="$SCRIPT_DIR/fastfetch/$f"
-        if [ -f "$src" ]; then
-            cp "$src" "$HOME_DIR/.config/fastfetch/$f" && ok "$f"
-        else
-            warn "No encontrado: fastfetch cmatrix/$f"
-        fi
+        fetch_file "fastfetch/$f" "$HOME_DIR/.config/fastfetch/$f"
+        [ -f "$HOME_DIR/.config/fastfetch/$f" ] && ok "$f"
     done
 }
 
@@ -73,16 +67,16 @@ step_fastfetch() {
 step_termux_config() {
     log 3 "Restaurando config .termux/..."
     mkdir -p "$HOME_DIR/.termux/background" "$HOME_DIR/.termux/shell-integration"
-    cfg="$SCRIPT_DIR/termux_config"
     for f in termux.properties termux-launcher-bindings.conf colors.properties font.ttf fonts.conf material-colors.sh material-colors.properties; do
-        [ -f "$cfg/$f" ] && cp "$cfg/$f" "$HOME_DIR/.termux/" && ok "$f"
+        fetch_file "termux_config/$f" "$HOME_DIR/.termux/$f"
+        [ -f "$HOME_DIR/.termux/$f" ] && ok "$f"
     done
-    [ -f "$cfg/background/background.jpeg" ] \
-        && cp "$cfg/background/background.jpeg" "$HOME_DIR/.termux/background/" && ok "background.jpeg"
-    [ -f "$cfg/shell-integration/termux-launcher.bash" ] \
-        && cp "$cfg/shell-integration/termux-launcher.bash" "$HOME_DIR/.termux/shell-integration/" && ok "termux-launcher.bash"
-    [ -f "$cfg/shell-integration/termux-launcher.zsh" ] \
-        && cp "$cfg/shell-integration/termux-launcher.zsh"  "$HOME_DIR/.termux/shell-integration/" && ok "termux-launcher.zsh"
+    fetch_file "termux_config/background/background.jpeg" "$HOME_DIR/.termux/background/background.jpeg"
+    [ -f "$HOME_DIR/.termux/background/background.jpeg" ] && ok "background.jpeg"
+    fetch_file "termux_config/shell-integration/termux-launcher.bash" "$HOME_DIR/.termux/shell-integration/termux-launcher.bash"
+    [ -f "$HOME_DIR/.termux/shell-integration/termux-launcher.bash" ] && ok "termux-launcher.bash"
+    fetch_file "termux_config/shell-integration/termux-launcher.zsh" "$HOME_DIR/.termux/shell-integration/termux-launcher.zsh"
+    [ -f "$HOME_DIR/.termux/shell-integration/termux-launcher.zsh" ] && ok "termux-launcher.zsh"
 }
 
 # ── 4. Paquetes base ───────────────────────────────────────

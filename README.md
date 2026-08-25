@@ -56,8 +56,6 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
 
 ### 🚀 5. Diagnóstico de Red & Entretenimiento
 * ⚡ **`speedtest` (o `speed`):** Medidor oficial de velocidad de Internet CLI para probar Ping, latencia, velocidad de bajada y subida en tiempo real.
-* 🕹️ **`tetris`:** Juego de Tetris clásico en colores y TUI para terminal con puntuaciones.
-* 🕹️ **`tetris`:** Juego de Tetris clásico en colores y TUI para terminal con puntuaciones.
 * 🐍 **`nsnake` (alias `snake`):** El juego de la serpiente retro clásica.
 * 🚂 **`sl` (alias `tren`):** Animación clásica de la locomotora de vapor cruzando tu pantalla.
 * 📖 **`glow`:** Lector y renderizador Markdown elegante con estilos y modo oscuro para leer documentos y manuales sin internet.

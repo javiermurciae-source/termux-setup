@@ -84,6 +84,14 @@
       "outputColor": "light_white",
       "text": "df -h /data/data/com.termux/files/home | awk 'NR==2 {print $3 \" / \" $2 \" · \" $5}'",
       "format": "{}"
+    },
+    {
+      "type": "localip",
+      "key": "{#cyan}󰩟 local ip{#}",
+      "showIpv4": true,
+      "showIpv6": false,
+      "showPrefixLen": false,
+      "showLoop": false
     }
   ]
 }

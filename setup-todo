@@ -114,7 +114,7 @@ step_setup_launcher() {
         warn "Se detectó un config.fish corrupto. Reparando..."
     fi
     
-    if [ -x "$HOME_DIR/.local/bin/fastfetch cmatrix" ] && [ -f "$HOME_DIR/.config/fish/config.fish" ]; then
+    if [ -x "$HOME_DIR/.local/bin/fastfetch" ] && [ -f "$HOME_DIR/.config/fish/config.fish" ]; then
         ok "El showcase ya está instalado. ¡Omitiendo descarga pesada! ⚡"
     else
         warn "Descargando e instalando showcase desde GitHub..."
@@ -134,7 +134,7 @@ EOF
     done
 }
 
-# ── 6. Fish config + fastfetch cmatrix al arrancar ─────────────────
+# ── 6. Fish config + fastfetch al arrancar ─────────────────
 step_fish_config() {
     log 6 "Configurando Fish + fastfetch cmatrix al arrancar..."
     
@@ -150,12 +150,12 @@ step_fish_config() {
 if status is-interactive
     function fish_greeting
         command clear
-        fastfetch cmatrix 2>/dev/null
+        fastfetch 2>/dev/null
     end
 end
 # FIN_SALUDO_AGY
 FISH_GREETING
-        ok "fastfetch cmatrix añadido al inicio (fish_greeting)"
+        ok "fastfetch añadido al inicio (fish_greeting)"
     fi
 
     PERSONAL="$HOME_DIR/.config/fish/conf.d/personal.fish"

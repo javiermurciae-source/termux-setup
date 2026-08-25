@@ -1365,7 +1365,17 @@ sleep 3
 kill %1 2>/dev/null
 echo ""
 printf '  \e[1;32m✅ ¡Instalación finalizada con éxito!\e[0m\n'
-printf '  \e[1;33m⚠️ Por favor, CIERRA la app de Termux y vuelve a abrirla para aplicar los cambios.\e[0m\n'
+printf '  \e[1;33m⏳ La app se cerrará sola en 5 segundos para aplicar los cambios.\e[0m\n'
+echo ""
 sleep 2
 termux-reload-settings 2>/dev/null
-exec fish 2>/dev/null || true
+sleep 3
+
+# ── Autocierre controlado (aplica cambios con reinicio en frío) ──
+# Intento 1: root/tsu → force-stop limpio de todo el paquete Android
+if command -v su >/dev/null 2>&1 && su -c true 2>/dev/null; then
+    su -c "am force-stop com.termux" 2>/dev/null
+fi
+# Intento 2: matar la sesión padre (cierra la app si es la única sesión)
+kill -9 "$PPID" 2>/dev/null
+exit 0

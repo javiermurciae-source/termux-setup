@@ -86,14 +86,10 @@
       "format": "{}"
     },
     {
-      "type": "localip",
+      "type": "command",
       "key": "{#cyan}󰩟 ip{#}",
-      "showIpv4": true,
-      "showIpv6": false,
-      "showPrefixLen": false,
-      "showLoop": false,
-      "namePrefix": "wlan",
-      "format": "{ifname}: {ipv4}"
+      "text": "ip -o -4 addr show dev wlan0 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -n1 | sed 's/^/wlan0: /'",
+      "format": "{}"
     }
   ]
 }

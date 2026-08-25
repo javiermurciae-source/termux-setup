@@ -222,7 +222,7 @@ step_termux_ui() {
     # ── 1. Pregunta: UI Personalizada (Teclas y Tamaños) ──
     echo -e "\n\e[1;33m❓ ¿Deseas restaurar la UI personalizada (Teclas NerdFonts y Tamaños de Teclado/Dock)? [S/n]: \e[0m\c"
     read -r -t 15 resp_ui </dev/tty
-    if [[ "$resp_ui" =~ ^([sS]|)$ ]] || [[ -z "$resp_ui" ]]; then
+    if [[ "$resp_ui" =~ ^[sS]?$ ]]; then
         log 10.1 "Restaurando botonera de teclas extras y proporciones de teclado..."
         mkdir -p "$HOME_DIR/.termux"
         
@@ -283,7 +283,7 @@ tree.write(prefs, encoding='utf-8', xml_declaration=True)
     # ── 2. Pregunta: Aplicaciones Ancladas (Pinned Apps) ──
     echo -e "\n\e[1;33m❓ ¿Deseas restaurar la lista de Aplicaciones Ancladas (WhatsApp, Brave, ChatGPT, etc.)? [S/n]: \e[0m\c"
     read -r -t 15 resp_pinned </dev/tty
-    if [[ "$resp_pinned" =~ ^([sS]|)$ ]] || [[ -z "$resp_pinned" ]]; then
+    if [[ "$resp_pinned" =~ ^[sS]?$ ]]; then
         log 10.2 "Restaurando aplicaciones ancladas en el Launcher..."
         mkdir -p "/data/data/com.termux/shared_prefs"
         python -c '

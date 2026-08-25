@@ -229,7 +229,7 @@ step_termux_ui() {
         # Botonera extra-keys
         cat << 'EOF' > "$HOME_DIR/.termux/termux.properties"
 fullscreen=false
-extra-keys=[[{"key":"tool:window.next","display":"☰","popup":{"key":"tool:window.previous","display":""}},{"key":"tool:pane.split_horizontal","display":"","popup":{"key":"tool:pane.split_vertical","display":""}},{"key":"tool:pane.kill_focused","display":"","popup":{"key":"tool:session.new","display":""}},{"key":"TAB","display":"","popup":"ESC"},{"key":"tool:workspace.picker","display":"","popup":"tool:terminal.select_all"},{"key":"tool:terminal.toggle_scratchpad","display":"","popup":"tool:terminal.select_url"},{"key":"KEYBOARD","display":"","popup":{"key":"tool:terminal.search_scrollback","display":""}}]]
+extra-keys=[[{"key":"tool:window.next","display":"☰","popup":{"key":"tool:window.previous","display":"󰖳"}},{"key":"tool:pane.split_horizontal","display":"󰯌","popup":{"key":"tool:pane.split_vertical","display":"󰯋"}},{"key":"tool:pane.kill_focused","display":"","popup":{"key":"tool:session.new","display":"󰝜"}},{"key":"TAB","display":"TAB","popup":"ESC"},{"key":"tool:workspace.picker","display":"","popup":{"key":"tool:terminal.select_all","display":"󱈅"}},{"key":"tool:terminal.toggle_scratchpad","display":"󱞂","popup":{"key":"tool:terminal.select_url","display":"󰌹"}},{"key":"KEYBOARD","display":"󰥻","popup":{"key":"tool:terminal.search_scrollback","display":"󱎸"}}]]
 extra-keys2=[]
 EOF
 
@@ -313,7 +313,7 @@ def set_val(tag, name, val):
     else:
         new_elem.set("value", val)
 
-pinned_apps =  + pinned_json + 
+pinned_apps = '{"schemaVersion":5,"items":[{"type":"app","packageName":"com.whatsapp","activityName":"com.whatsapp.Main"},{"type":"app","packageName":"com.brave.browser","activityName":"com.google.android.apps.chrome.Main"},{"type":"app","packageName":"com.transsion.camera","activityName":"com.android.camera.CameraLauncher"},{"type":"app","packageName":"com.openai.chatgpt","activityName":"com.openai.chatgpt.MainActivity"},{"type":"app","packageName":"com.google.android.gm","activityName":"com.google.android.gm.ConversationListActivityGmail"},{"type":"app","packageName":"com.nequi.MobileApp","activityName":"com.nequi.MobileApp.MainActivity"},{"type":"app","packageName":"me.bmax.apatch","activityName":"me.bmax.apatch.ui.MainActivity"},{"type":"app","packageName":"com.binance.dev","activityName":"com.eaas.launcher.activities.main.MainActivity"},{"type":"app","packageName":"com.discord","activityName":"com.discord.main.MainDefault"},{"type":"app","packageName":"com.google.android.dialer","activityName":"com.google.android.dialer.extensions.GoogleDialtactsActivity"},{"type":"app","packageName":"com.google.android.apps.youtube.music","activityName":"com.google.android.apps.youtube.music.activities.MusicActivity"},{"type":"app","packageName":"com.pinterest","activityName":"com.pinterest.activity.PinterestActivity"}],"folders":[],"appIconOverrides":[]}'
 set_val("string", "app_launcher_pinned_items_v2", pinned_apps)
 set_val("string", "app_launcher_dock_style", "default")
 set_val("boolean", "app_launcher_apps_row_enabled", "true")

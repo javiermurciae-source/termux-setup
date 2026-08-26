@@ -88,7 +88,7 @@
     {
       "type": "command",
       "key": "{#cyan}󰩟 ip{#}",
-      "text": "ip -o -4 addr show dev wlan0 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -n1 | sed 's/^/wlan0: /'",
+      "text": "python3 /data/data/com.termux/files/home/.config/fastfetch/wlan_ip.py",
       "format": "{}"
     }
   ]

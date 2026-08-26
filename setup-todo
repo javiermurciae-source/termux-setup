@@ -55,12 +55,13 @@ step_scripts() {
 
 # ── 2. Fastfetch ───────────────────────────────────────────
 step_fastfetch() {
-    log 2 "Instalando config Fastfetch (config.jsonc + descargas.gif)..."
+    log 2 "Instalando config Fastfetch (config.jsonc + descargas.gif + wlan_ip.py)..."
     mkdir -p "$HOME_DIR/.config/fastfetch"
-    for f in config.jsonc descargas.gif; do
+    for f in config.jsonc descargas.gif wlan_ip.py; do
         fetch_file "fastfetch/$f" "$HOME_DIR/.config/fastfetch/$f"
         [ -f "$HOME_DIR/.config/fastfetch/$f" ] && ok "$f"
     done
+    chmod +x "$HOME_DIR/.config/fastfetch/wlan_ip.py" 2>/dev/null
 }
 
 # ── 3. Config .termux/ ─────────────────────────────────────

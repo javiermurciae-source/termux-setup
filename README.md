@@ -54,14 +54,30 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
 * 🔬 **Ingeniería Inversa & Laboratorio:** `jadx` (descompilador Java), `apktool`, `openjdk-17`, `gradle`.
 * 📶 **Sniffers Wi-Fi/Red:** `tcpdump`, `tshark` (Wireshark CLI).
 
-### 🚀 5. Diagnóstico de Red & Entretenimiento
+### 📄 5. Document Lab (CLI puro)
+* 🛠️ **`doclab check`:** Verificador completo de todas las herramientas instaladas.
+* 📊 **`doclab info`:** Inspección de PDF (metadatos, tipografías, páginas).
+* 📝 **`doclab text`:** Extracción de texto con layout preservado.
+* 👁️ **`doclab preview`:** Previsualización de páginas directamente en la terminal (Chafa).
+* ✂️ **`doclab select / split / merge`:** Selección, separación y unión de páginas PDF.
+* 📦 **`doclab optimize`:** Compresión de PDF (screen, ebook, printer, prepress).
+* 🖼️ **`doclab image / svg`:** Preparación de imágenes y conversión SVG→PDF.
+* ✍️ **`doclab typst`:** Crear PDF moderno desde Typst.
+* 📐 **`doclab latex`:** Crear PDF académico desde LaTeX (Tectonic).
+* 📑 **`doclab markdown`:** Convertir Markdown a PDF (Pandoc + Tectonic).
+* 🔍 **`doclab ocr`:** OCR con Tesseract (español incluido) → PDF buscable.
+* 🔎 **`doclab metadata`:** Metadatos EXIF de cualquier archivo.
+
+---
+
+### 🚀 6. Diagnóstico de Red & Entretenimiento
 * ⚡ **`speedtest` (o `speed`):** Medidor oficial de velocidad de Internet CLI para probar Ping, latencia, velocidad de bajada y subida en tiempo real.
 * 🐍 **`nsnake` (alias `snake`):** El juego de la serpiente retro clásica.
 * 🚂 **`sl` (alias `tren`):** Animación clásica de la locomotora de vapor cruzando tu pantalla.
 * 📖 **`glow`:** Lector y renderizador Markdown elegante con estilos y modo oscuro para leer documentos y manuales sin internet.
 * 🕶️ **`cmatrix`:** Lluvia de código digital estilo Matrix para salvapantallas retro.
 
-### 🎨 6. Estética, Shell & UI Restaurable
+### 🎨 7. Estética, Shell & UI Restaurable
 * 🐟 **Shell:** `fish` con Oh My Posh, Fastfetch y temas personalizados.
 * 🎛️ **UI & Teclado:** Restauración de teclas extras con NerdFonts (`󰥻`, `󰯌`, ``, `󱎸`, ``, `󱞂`), márgenes y proporciones milimétricas.
 * 📱 **Pinned Apps:** Respaldador y restaurador de las 12 aplicaciones ancladas del Launcher (WhatsApp, Brave, ChatGPT, Nequi, APatch, etc.).
@@ -98,7 +114,10 @@ termux-setup/
 ├── fastfetch/              # Configuraciones de fastfetch y assets
 ├── termux_config/          # Configuración base de termux.properties
 ├── portapapeles/           # Utilidad flotante de portapapeles FZF
-└── scripts/                # Scripts utilitarios auxiliares
+├── scripts/                # Scripts utilitarios auxiliares
+│   └── doclab.sh           # Document Lab (comando: doclab)
+└── docs/
+    └── document-lab.md     # Guía completa del Document Lab
 ```
 
 ---

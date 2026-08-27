@@ -221,6 +221,9 @@ alias pasar='transfile'
 alias searchsploit='searchsploit'
 alias sploit='searchsploit'
 
+# Document Lab
+alias dlab='doclab'
+
 # Sincronizador Maestro
 alias sync-setup='curl -sL https://raw.githubusercontent.com/javiermurciae-source/termux-setup/main/setup-todo -o ~/.setup-todo.sh && rm -f ~/.core_setup_done && bash ~/.setup-todo.sh </dev/tty'
 
@@ -1340,9 +1343,48 @@ step_advanced_lab() {
     ok "Laboratorio Avanzado listo 🔬 (tcpdump, java, gradle, apktool)"
 }
 
+# ── 10. Document Lab (CLI puro: Typst, LaTeX, PDF, OCR) ──
+step_document_lab() {
+    log 10 "Instalando Document Lab (creación, análisis y OCR de documentos)..."
+
+    # 1. Paquetes: motores de creación, análisis PDF, OCR, previsualización
+    DEBIAN_FRONTEND=noninteractive pkg install -y \
+        typst tectonic pandoc \
+        poppler qpdf ghostscript imagemagick librsvg \
+        file python-pillow fontconfig-utils exiftool \
+        tesseract unpaper chafa \
+        >/dev/null 2>&1 || true
+
+    # 2. Idioma OCR español (tessdata_fast v4.1.0, verificado con SHA-256)
+    TESSDATA_DIR="$PREFIX/share/tessdata"
+    SPA_TESSDATA="$TESSDATA_DIR/spa.traineddata"
+    if [ ! -f "$SPA_TESSDATA" ]; then
+        log 10.1 "Descargando modelo OCR español (spa.traineddata)..."
+        SPA_URL="https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/4.1.0/spa.traineddata"
+        SPA_SHA="6f2e04d02774a18f01bed44b1111f2cd7f3ba7ac9dc4373cd34d59067c4f4e47"
+        curl -fSL "$SPA_URL" -o "$SPA_TESSDATA" 2>/dev/null
+        DOWNLOADED_SHA=$(sha256sum "$SPA_TESSDATA" 2>/dev/null | cut -d' ' -f1)
+        if [ "$DOWNLOADED_SHA" = "$SPA_SHA" ]; then
+            ok "spa.traineddata verificado (SHA-256 ✔)"
+        else
+            rm -f "$SPA_TESSDATA"
+            warn "spa.traineddata falló la verificación SHA-256 (esperado: $SPA_SHA, obtuvo: $DOWNLOADED_SHA)"
+        fi
+    else
+        ok "spa.traineddata ya presente"
+    fi
+
+    # 3. Copiar doclab.sh y crear enlace global
+    fetch_file "scripts/doclab.sh" "$PREFIX/bin/doclab"
+    chmod +x "$PREFIX/bin/doclab" 2>/dev/null
+
+    ok "Document Lab listo 📄 (doclab check)"
+}
+
 step_core_termux
 step_recon_scraping
 step_advanced_lab
+step_document_lab
 step_termux_ui
 
 touch "$FLAG"
@@ -1358,6 +1400,7 @@ printf '  \e[34m🌟 Showcase:\e[0m    Fish + OhMyPosh + Neovim + eza\n'
 printf '  \e[34m⚡ Core-Termux:\e[0m  instalado\n'
 printf '  \e[34m🕵️ Recon:\e[0m       WhatWeb, Nmap, SearchSploit listos\n'
 printf '  \e[34m🔬 Lab Avanzado:\e[0m    Java, Gradle, Apktool, tcpdump\n'
+printf '  \e[34m📄 Document Lab:\e[0m   Typst, Tectonic, Pandoc, OCR (español), doclab\n'
 printf '  \e[34m📬 Correo CLI:\e[0m   CLI-Inbox (Moderno para Gmail, comando: inbox / mail)\n'
 printf '  \e[34m📋 Scripts:\e[0m     horario · gif-selector · portapapeles\n'
 echo ""

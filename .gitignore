@@ -1,0 +1,22 @@
+# Credenciales y secretos locales
+mail_accounts.json
+.env
+.env.*
+*.key
+*.pem
+*.jks
+*.keystore
+
+# Archivos generados
+__pycache__/
+*.py[cod]
+*.log
+.tmp/
+build/
+dist/
+
+# Salidas habituales de Document Lab
+*.aux
+*.log
+*.out
+*.synctex.gz

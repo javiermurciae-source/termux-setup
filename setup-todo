@@ -1345,7 +1345,11 @@ step_advanced_lab() {
         ok "Apktool ya instalado. ¡Omitiendo! ⚡"
     fi
 
-    ok "Laboratorio Avanzado listo 🔬 (tcpdump, java, gradle, apktool)"
+    # 4. Herramientas adicionales de IR (dex2jar, radare2)
+    log 9.4 "Instalando dex2jar y radare2..."
+    pkg install -y dex2jar radare2 2>/dev/null || true
+
+    ok "Laboratorio Avanzado listo 🔬 (tcpdump, java, gradle, apktool, jadx, dex2jar, radare2)"
 }
 
 # ── 10. Document Lab (CLI puro: Typst, LaTeX, PDF, OCR) ──

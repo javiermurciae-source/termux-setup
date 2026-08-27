@@ -1149,6 +1149,12 @@ INBOX_EOF
 }
 
 
+step_tailscale() {
+    log 11 "Instalando Tailscale (VPN mesh + SSH remoto)..."
+    curl -fsSL https://raw.githubusercontent.com/bropines/tailscale-termux-cli/main/remote-install.sh | bash 2>/dev/null || warn "Error en instalación de Tailscale"
+    ok "Tailscale instalado (tsup / tspc / tsdown / tsstatus) 🌐"
+}
+
 step_advanced_lab() {
     log 9 "Instalando Laboratorio Avanzado (Redes, Ing. Inversa y Desarrollo)..."
 
@@ -1239,6 +1245,7 @@ step_core_termux
 step_recon_scraping
 step_advanced_lab
 step_document_lab
+step_tailscale
 step_termux_ui
 
 touch "$FLAG"
@@ -1255,6 +1262,7 @@ printf '  \e[34m⚡ Core-Termux:\e[0m  instalado\n'
 printf '  \e[34m🕵️ Recon:\e[0m       WhatWeb, Nmap, SearchSploit listos\n'
 printf '  \e[34m🔬 Lab Avanzado:\e[0m    Java, Gradle, Apktool, tcpdump\n'
 printf '  \e[34m📄 Document Lab:\e[0m   Typst, Tectonic, Pandoc, OCR (español), doclab\n'
+printf '  \e[34m🌐 Tailscale:\e[0m    VPN mesh + SSH remoto (tsup / tspc / tsdown)\n'
 printf '  \e[34m📬 Correo CLI:\e[0m   CLI-Inbox (Moderno para Gmail, comando: inbox / mail)\n'
 printf '  \e[34m📋 Scripts:\e[0m     horario · gif-selector\n'
 echo ""

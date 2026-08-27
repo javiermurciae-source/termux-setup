@@ -72,7 +72,15 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
 
 ---
 
-### 🚀 6. Diagnóstico de Red & Entretenimiento
+### 🌐 6. Tailscale (VPN Mesh + SSH Remoto)
+* 🌐 **Tailscale:** VPN peer-to-peer con acceso SSH remoto a tus dispositivos.
+* 🔗 **`tsup`:** Encender Tailscale (on-demand, no permanente).
+* 💻 **`tspc`:** Conectar SSH a tu PC por Tailscale.
+* ⬇️ **`tsdown`:** Apagar Tailscale.
+* 📊 **`tsstatus`:** Ver estado de dispositivos conectados.
+* 📤 **SCP/RSYNC:** Compartir archivos por Tailscale.
+
+### 🚀 7. Diagnóstico de Red & Entretenimiento
 * ⚡ **`speedtest` (o `speed`):** Medidor oficial de velocidad de Internet CLI para probar Ping, latencia, velocidad de bajada y subida en tiempo real.
 * 🐍 **`nsnake` (alias `snake`):** El juego de la serpiente retro clásica.
 * 🚂 **`sl` (alias `tren`):** Animación clásica de la locomotora de vapor cruzando tu pantalla.

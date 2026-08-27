@@ -100,7 +100,12 @@ step_packages() {
     pkg install -y glibc proot 2>/dev/null
     
     # Herramientas generales + Root + ADB
-    pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix glow sl nsnake speedtest-go termux-api yazi tsu android-tools python ruby jq nmap whois dnsutils alpine espeak aapt aapt2 apksigner dx ecj patchelf wget lsd 2>/dev/null
+    pkg install -y fish git curl fzf sqlite cowsay nyancat cmatrix glow sl speedtest-go termux-api tsu android-tools python ruby jq nmap whois dnsutils aapt aapt2 apksigner dx ecj patchelf wget lsd 2>/dev/null
+    
+    # ── 4c. Power Tools (herramientas que no pueden faltar) ──
+    log 4c "Instalando Power Tools (htop, ncdu, yq, mtr, socat, screen, traceroute)..."
+    pkg install -y htop ncdu yq mtr socat screen traceroute 2>/dev/null || true
+    ok "Power Tools instalados ⚡"
 
     # ── 4b. GitHub CLI ─────────────────────────────────────
     log 4b "Instalando GitHub CLI (gh)..."

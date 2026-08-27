@@ -83,7 +83,7 @@ Integración completa con **Core-Termux** instalando y compilando asistentes de 
 * 🐟 **Shell:** `fish` con Oh My Posh, Fastfetch y temas personalizados.
 * 🎛️ **UI & Teclado:** Restauración de teclas extras con NerdFonts (`󰥻`, `󰯌`, ``, `󱎸`, ``, `󱞂`), márgenes y proporciones milimétricas.
 * 📱 **Pinned Apps:** Respaldador y restaurador de las 12 aplicaciones ancladas del Launcher (WhatsApp, Brave, ChatGPT, Nequi, APatch, etc.).
-* 📋 **Scripts de Utilidad:** `horario`, `gif-selector`, `portapapeles.sh` (con `fzf`).
+* 📋 **Scripts de Utilidad:** `horario`, `gif-selector`.
 
 ---
 
@@ -115,7 +115,6 @@ termux-setup/
 ├── README.md               # Documentación completa
 ├── fastfetch/              # Configuraciones de fastfetch y assets
 ├── termux_config/          # Configuración base de termux.properties
-├── portapapeles/           # Utilidad flotante de portapapeles FZF
 ├── scripts/                # Scripts utilitarios auxiliares
 │   └── doclab.sh           # Document Lab (comando: doclab)
 └── docs/

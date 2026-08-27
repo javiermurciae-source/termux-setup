@@ -45,7 +45,7 @@ warn() { printf '      \e[33m⚠\e[0m  %s\n' "$1"; }
 step_scripts() {
     log 1 "Copiando scripts personales..."
     mkdir -p "$HOME_DIR"
-    for f in horario.sh verificar-cod.sh gif-selector.sh fzf_clipboard_scratchpad.sh; do
+    for f in horario.sh verificar-cod.sh gif-selector.sh; do
         fetch_file "scripts/$f" "$HOME_DIR/$f"
         if [ -f "$HOME_DIR/$f" ]; then
             chmod +x "$HOME_DIR/$f" && ok "$f"
@@ -1407,7 +1407,7 @@ printf '  \e[34m🕵️ Recon:\e[0m       WhatWeb, Nmap, SearchSploit listos\n'
 printf '  \e[34m🔬 Lab Avanzado:\e[0m    Java, Gradle, Apktool, tcpdump\n'
 printf '  \e[34m📄 Document Lab:\e[0m   Typst, Tectonic, Pandoc, OCR (español), doclab\n'
 printf '  \e[34m📬 Correo CLI:\e[0m   CLI-Inbox (Moderno para Gmail, comando: inbox / mail)\n'
-printf '  \e[34m📋 Scripts:\e[0m     horario · gif-selector · portapapeles\n'
+printf '  \e[34m📋 Scripts:\e[0m     horario · gif-selector\n'
 echo ""
 nyancat 2>/dev/null &
 sleep 3

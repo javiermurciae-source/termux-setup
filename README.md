@@ -2,6 +2,8 @@
 
 Script de restauración y aprovisionamiento maestro completamente automatizado, modular e idempotente para **Termux** y **Termux Launcher**.
 
+![Termux Setup Preview](readme_screenshot.png)
+
 ---
 
 ## 🌟 Características Principales

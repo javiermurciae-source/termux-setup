@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
 """
-FileServer TUI - Terminal User Interface
-Gestor de archivos con interfaz de terminal para compartir por red
-
-Uso:
-  python fileserver-tui.py                    # Sirve ~/storage
-  python fileserver-tui.py /ruta/carpeta      # Sirve esa carpeta
-  python fileserver-tui.py --port 9090        # Puerto personalizado
-  python fileserver-tui.py --no-server        # Solo TUI, sin servidor web
+FileServer TUI - Estilo Yazi
+File manager de terminal con interfaz de dos paneles
+Soporte local y remoto (via Tailscale SOCKS5)
 """
 
 import curses
@@ -15,143 +10,96 @@ import os
 import sys
 import json
 import time
-import signal
 import argparse
-import socket
 import subprocess
-import threading
 import mimetypes
-import urllib.parse
 from pathlib import Path
 from datetime import datetime
-import urllib.request
 from http.server import HTTPServer, BaseHTTPRequestHandler
+import urllib.parse
+import urllib.request
+import threading
+import socket
 
-# ─── Globals ──────────────────────────────────────────────
+# --- Globals ---
 BASE_DIR = ""
 PORT = 8080
 REMOTE_HOST = ""
 REMOTE_PORT = 8080
 REMOTE_MODE = False
-FILE_LIST = []
+SERVER_RUNNING = True
+
+# --- State ---
+DIRS = []
+FILES = []
 SELECTED = 0
 SCROLL = 0
-SORT_BY = "name"  # name, size, date
-SORT_REV = False
-SHOW_HIDDEN = False
+PREVIEW_LINES = []
 STATUS_MSG = ""
 STATUS_COLOR = 2
-SERVER_RUNNING = True
-PROCESO_INFO = {}
+SORT_BY = "name"
+SORT_REV = False
+SHOW_HIDDEN = False
 
 def human_size(size):
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+    for u in ['B', 'KB', 'MB', 'GB', 'TB']:
         if size < 1024:
-            return f"{size:>7.1f} {unit}"
+            return f"{size:.1f} {u}"
         size /= 1024
-    return f"{size:>7.1f} TB"
+    return f"{size:.1f} TB"
 
-def file_icon(name, is_dir):
+def file_ext(name):
+    return Path(name).suffix.lower()
+
+def get_preview(name, is_dir, full_path):
+    ext = file_ext(name)
     if is_dir:
-        return "📁"
-    ext = Path(name).suffix.lower()
-    icons = {
-        '.pdf': '📄', '.doc': '📝', '.docx': '📝', '.txt': '📝',
-        '.xls': '📊', '.xlsx': '📊', '.csv': '📊',
-        '.jpg': '🖼️ ', '.jpeg': '🖼️ ', '.png': '🖼️ ', '.gif': '🖼️ ',
-        '.mp4': '🎬', '.avi': '🎬', '.mkv': '🎬', '.mov': '🎬',
-        '.mp3': '🎵', '.wav': '🎵', '.ogg': '🎵', '.m4a': '🎵',
-        '.zip': '📦', '.rar': '📦', '.7z': '📦', '.tar': '📦',
-        '.py': '🐍', '.js': '⚡', '.html': '🌐', '.css': '🎨',
-        '.sh': '⚙️ ', '.bash': '⚙️ ',
-        '.eap': '🏗️ ', '.eapx': '🏗️ ', '.apk': '📱',
-        '.md': '📖', '.json': '📋', '.xml': '📋',
-        '.ttf': '🔤', '.otf': '🔤',
-    }
-    return icons.get(ext, '📄')
+        try:
+            entries = os.listdir(full_path)
+            dirs = [e for e in entries if os.path.isdir(os.path.join(full_path, e))]
+            files = [e for e in entries if not os.path.isdir(os.path.join(full_path, e))]
+            lines = [f"  {len(dirs)} dirs, {len(files)} files"]
+            for e in sorted(entries)[:15]:
+                p = os.path.join(full_path, e)
+                d = "[DIR]" if os.path.isdir(p) else human_size(os.path.getsize(p))
+                lines.append(f"  {e[:30]}  {d}")
+            if len(entries) > 15:
+                lines.append(f"  ... +{len(entries)-15} more")
+            return lines
+        except:
+            return ["  [Permission denied]"]
+    elif ext in ('.txt', '.md', '.py', '.sh', '.json', '.xml', '.csv', '.log', '.conf', '.cfg', '.ini', '.yaml', '.yml', '.toml'):
+        try:
+            with open(full_path, 'r', errors='replace') as f:
+                lines = [l.rstrip()[:60] for _, l in zip(range(20), f)]
+            return lines
+        except:
+            return ["  [Cannot read]"]
+    elif ext in ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'):
+        return ["  [Image]", f"  {ext.upper()}", f"  {human_size(os.path.getsize(full_path))}"]
+    elif ext in ('.mp4', '.avi', '.mkv', '.mov', '.webm'):
+        return ["  [Video]", f"  {ext.upper()}", f"  {human_size(os.path.getsize(full_path))}"]
+    elif ext in ('.mp3', '.wav', '.ogg', '.m4a', '.flac'):
+        return ["  [Audio]", f"  {ext.upper()}", f"  {human_size(os.path.getsize(full_path))}"]
+    elif ext in ('.zip', '.tar', '.gz', '.rar', '.7z'):
+        return ["  [Archive]", f"  {ext.upper()}", f"  {human_size(os.path.getsize(full_path))}"]
+    elif ext in ('.pdf',):
+        return ["  [PDF]", f"  {human_size(os.path.getsize(full_path))}"]
+    elif ext in ('.eap', '.eapx'):
+        return ["  [Enterprise Architect]", f"  {human_size(os.path.getsize(full_path))}"]
+    elif ext in ('.apk',):
+        return ["  [Android Package]", f"  {human_size(os.path.getsize(full_path))}"]
+    else:
+        return ["  [File]", f"  {ext or 'no ext'}", f"  {human_size(os.path.getsize(full_path))}"]
 
-def get_local_ip():
-    try:
-        r = subprocess.run(["tailscale-cli", "ip", "-4"], capture_output=True, text=True, timeout=5)
-        if r.returncode == 0:
-            return r.stdout.strip()
-    except:
-        pass
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except:
-        return "localhost"
-
-def get_hostname():
-    try:
-        r = subprocess.run(["tailscale-cli", "status"], capture_output=True, text=True, timeout=5)
-        if r.returncode == 0:
-            for line in r.stdout.strip().split('\n'):
-                parts = line.split()
-                if len(parts) >= 2 and parts[1] != 'hostname':
-                    return parts[1]
-    except:
-        pass
-    try:
-        return socket.gethostname()
-    except:
-        return "unknown"
-
-def scan_files_remote():
-    """Fetch file listing from remote FileServer via SOCKS5 proxy"""
-    global FILE_LIST, PROCESO_INFO
-    FILE_LIST = []
-    try:
-        path = BASE_DIR if BASE_DIR.startswith('/') else '/' + BASE_DIR
-        url = f"http://{REMOTE_HOST}:{REMOTE_PORT}{path}?json=true"
-        r = subprocess.run(
-            ["curl", "-s", "--connect-timeout", "5",
-             "--socks5-hostname", "127.0.0.1:1055", url],
-            capture_output=True, text=True, timeout=10
-        )
-        if r.returncode != 0 or not r.stdout.strip():
-            STATUS_MSG = f"Connection error"
-            return
-        data = json.loads(r.stdout)
-        for item in data.get('items', []):
-            if not SHOW_HIDDEN and item['name'].startswith('.'):
-                continue
-            FILE_LIST.append({
-                'name': item['name'],
-                'is_dir': item['is_dir'],
-                'size': item['size'],
-                'mtime': item['mtime'],
-                'date': datetime.fromtimestamp(item['mtime']).strftime('%Y-%m-%d %H:%M'),
-            })
-    except Exception as e:
-        STATUS_MSG = f"Error: {e}"
-    
-    def sort_key(f):
-        if f['is_dir']:
-            return (0, f['name'].lower())
-        if SORT_BY == 'size':
-            return (1, f['size'])
-        elif SORT_BY == 'date':
-            return (1, f['mtime'])
-        return (1, f['name'].lower())
-    
-    FILE_LIST.sort(key=sort_key, reverse=SORT_REV)
-
-def scan_files():
-    global FILE_LIST, PROCESO_INFO
-    if REMOTE_MODE:
-        scan_files_remote()
-        return
-    FILE_LIST = []
+def scan_local():
+    global DIRS, FILES
+    DIRS = []
+    FILES = []
     try:
         entries = sorted(os.listdir(BASE_DIR))
     except PermissionError:
         return
-    
     for entry in entries:
         if not SHOW_HIDDEN and entry.startswith('.'):
             continue
@@ -164,335 +112,283 @@ def scan_files():
         except:
             size = 0
             mtime = 0
-        
-        FILE_LIST.append({
-            'name': entry,
-            'is_dir': is_dir,
-            'size': size,
-            'mtime': mtime,
-            'date': datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M'),
-        })
-    
-    # Sort
-    def sort_key(f):
-        if f['is_dir']:
-            return (0, f['name'].lower())
-        if SORT_BY == 'size':
-            return (1, f['size'])
-        elif SORT_BY == 'date':
-            return (1, f['mtime'])
-        return (1, f['name'].lower())
-    
-    FILE_LIST.sort(key=sort_key, reverse=SORT_REV)
-    
-    # Get process info
-    PROCESO_INFO = {}
-    try:
-        r = subprocess.run(["pgrep", "-a", "fileserver"], capture_output=True, text=True, timeout=3)
-        for line in r.stdout.strip().split('\n'):
-            if 'fileserver' in line:
-                parts = line.split()
-                if len(parts) >= 2:
-                    PROCESO_INFO['pid'] = parts[0]
-    except:
-        pass
+        item = {'name': entry, 'is_dir': is_dir, 'size': size, 'mtime': mtime}
+        if is_dir:
+            DIRS.append(item)
+        else:
+            FILES.append(item)
+    sort_items()
 
-def draw_header(stdscr, height, width):
-    """Draw the header bar"""
-    hostname = get_hostname()
-    ip = get_local_ip()
-    dir_count = sum(1 for f in FILE_LIST if f['is_dir'])
-    file_count = len(FILE_LIST) - dir_count
-    total_size = sum(f['size'] for f in FILE_LIST if not f['is_dir'])
-    
+def scan_remote():
+    global DIRS, FILES, STATUS_MSG
+    DIRS = []
+    FILES = []
     try:
-        # Title bar
-        title = " [ FileServer TUI ] "
-        stdscr.attron(curses.color_pair(1) | curses.A_BOLD)
-        stdscr.addnstr(0, 0, title.ljust(width), width)
-        stdscr.attroff(curses.color_pair(1) | curses.A_BOLD)
-        
-        # Info bar
-        info = f" {hostname} ({ip}:{PORT}) | {BASE_DIR} | {dir_count}d {file_count}f {human_size(total_size)}"
-        stdscr.attron(curses.color_pair(5))
-        stdscr.addnstr(1, 0, info.ljust(width), width)
-        stdscr.attroff(curses.color_pair(5))
-        
-        # Separator
-        stdscr.attron(curses.color_pair(1))
-        stdscr.addnstr(2, 0, "-" * width, width)
-        stdscr.attroff(curses.color_pair(1))
-    except curses.error:
-        pass
+        path = BASE_DIR if BASE_DIR.startswith('/') else '/' + BASE_DIR
+        url = f"http://{REMOTE_HOST}:{REMOTE_PORT}{path}?json=true"
+        r = subprocess.run(
+            ["curl", "-s", "--connect-timeout", "5",
+             "--socks5-hostname", "127.0.0.1:1055", url],
+            capture_output=True, text=True, timeout=10
+        )
+        if r.returncode != 0 or not r.stdout.strip():
+            STATUS_MSG = "Connection error"
+            return
+        data = json.loads(r.stdout)
+        for item in data.get('items', []):
+            if not SHOW_HIDDEN and item['name'].startswith('.'):
+                continue
+            if item['is_dir']:
+                DIRS.append(item)
+            else:
+                FILES.append(item)
+    except Exception as e:
+        STATUS_MSG = str(e)[:50]
+    sort_items()
 
-def draw_columns(stdscr, width):
-    """Draw column headers"""
-    y = 3
-    try:
-        cols = f" {'Icon':<4} {'Name':<40} {'Size':>10} {'Date':<16} {'Type':<6}"
-        stdscr.attron(curses.color_pair(3) | curses.A_BOLD)
-        stdscr.addnstr(y, 0, cols.ljust(width), width)
-        stdscr.attroff(curses.color_pair(3) | curses.A_BOLD)
-        
-        stdscr.attron(curses.color_pair(1))
-        stdscr.addnstr(y + 1, 0, "-" * width, width)
-        stdscr.attroff(curses.color_pair(1))
-    except curses.error:
-        pass
+def sort_items():
+    def key(d):
+        return d['name'].lower()
+    if SORT_BY == 'size':
+        def key(d): return (0 if d['is_dir'] else 1, d['size'])
+    elif SORT_BY == 'date':
+        def key(d): return (0 if d['is_dir'] else 1, d['mtime'])
+    DIRS.sort(key=key, reverse=SORT_REV)
+    FILES.sort(key=key, reverse=SORT_REV)
 
-def draw_files(stdscr, height, width):
-    """Draw file list"""
-    global SCROLL, SELECTED
-    
-    start_y = 5
-    max_rows = height - start_y - 3  # Leave room for status bar
-    
-    # Clamp selection
+def get_all_items():
+    return DIRS + FILES
+
+def download_file(name):
+    if REMOTE_MODE:
+        path = BASE_DIR if BASE_DIR.startswith('/') else '/' + BASE_DIR
+        url = f"http://{REMOTE_HOST}:{REMOTE_PORT}{path}/{name}"
+        dest = os.path.expanduser(f"~/storage/downloads/{name}")
+        r = subprocess.run(
+            ["curl", "-s", "-L", "--connect-timeout", "10",
+             "--socks5-hostname", "127.0.0.1:1055", "-o", dest, url],
+            capture_output=True, text=True, timeout=30
+        )
+        if r.returncode == 0 and os.path.exists(dest):
+            return True, dest
+        return False, "Download failed"
+    else:
+        src = os.path.join(BASE_DIR, name)
+        dest = os.path.expanduser(f"~/storage/downloads/{name}")
+        try:
+            import shutil
+            shutil.copy2(src, dest)
+            return True, dest
+        except Exception as e:
+            return False, str(e)
+
+def draw_ui(stdscr, height, width):
+    stdscr.erase()
+    left_w = width // 2
+    right_w = width - left_w
+
+    items = get_all_items()
+    total = len(items)
+
+    # Clamp
     if SELECTED < 0:
         SELECTED = 0
-    if SELECTED >= len(FILE_LIST):
-        SELECTED = max(0, len(FILE_LIST) - 1)
-    
-    # Adjust scroll
+    if SELECTED >= total:
+        SELECTED = max(0, total - 1)
+
+    max_rows = height - 3
     if SELECTED < SCROLL:
         SCROLL = SELECTED
     if SELECTED >= SCROLL + max_rows:
         SCROLL = SELECTED - max_rows + 1
-    
+
+    # --- Header ---
+    header = f" FileServer TUI "
+    remote_tag = f" [REMOTE: {REMOTE_HOST}]" if REMOTE_MODE else ""
+    dir_info = f" {BASE_DIR} "
+    stats = f" {len(DIRS)}d {len(FILES)}f "
+    hdr = f"{header}{remote_tag}{dir_info}{stats}"
+    try:
+        stdscr.attron(curses.color_pair(1) | curses.A_BOLD)
+        stdscr.addnstr(0, 0, hdr.center(width)[:width], width)
+        stdscr.attroff(curses.color_pair(1) | curses.A_BOLD)
+    except curses.error:
+        pass
+
+    # --- Left panel: file list ---
+    try:
+        stdscr.attron(curses.color_pair(1))
+        stdscr.addnstr(1, 0, "-" * left_w, left_w)
+        stdscr.attroff(curses.color_pair(1))
+    except curses.error:
+        pass
+
     for i in range(max_rows):
+        y = 2 + i
         idx = SCROLL + i
-        y = start_y + i
-        
-        if idx >= len(FILE_LIST):
-            # Empty line
-            stdscr.addnstr(y, 0, " " * width, width)
-            continue
-        
-        f = FILE_LIST[idx]
-        icon = "D" if f['is_dir'] else "F"
-        name = f['name']
-        if f['is_dir']:
-            name += "/"
-        
-        max_name = width - 40
-        if len(name) > max_name:
-            name = name[:max_name-2] + ".."
-        
-        size_str = human_size(f['size']) if not f['is_dir'] else "  <DIR>"
-        ext = Path(f['name']).suffix.upper().replace('.', '') if not f['is_dir'] else "DIR"
-        if len(ext) > 6:
-            ext = ext[:6]
-        
-        line = f" {icon} {name:<{max_name}} {size_str:>10} {f['date']:<16} {ext:<6}"
-        
         try:
+            if idx >= total:
+                stdscr.addnstr(y, 0, " " * left_w, left_w)
+                continue
+            item = items[idx]
+            name = item['name']
+            if item['is_dir']:
+                name += "/"
+            max_name = left_w - 12
+            if len(name) > max_name:
+                name = name[:max_name-2] + ".."
+            size = " <DIR>" if item['is_dir'] else human_size(item['size'])[:8]
+            line = f" {name:<{max_name}} {size:>8} "
             if idx == SELECTED:
                 stdscr.attron(curses.color_pair(2) | curses.A_BOLD)
-                stdscr.addnstr(y, 0, line.ljust(width), width)
+                stdscr.addnstr(y, 0, line[:left_w], left_w)
                 stdscr.attroff(curses.color_pair(2) | curses.A_BOLD)
-            elif f['is_dir']:
+            elif item['is_dir']:
                 stdscr.attron(curses.color_pair(4))
-                stdscr.addnstr(y, 0, line.ljust(width), width)
+                stdscr.addnstr(y, 0, line[:left_w], left_w)
                 stdscr.attroff(curses.color_pair(4))
             else:
-                stdscr.addnstr(y, 0, line.ljust(width), width)
+                stdscr.addnstr(y, 0, line[:left_w], left_w)
         except curses.error:
             break
 
-def draw_status(stdscr, height, width):
-    """Draw status bar"""
-    global STATUS_MSG, STATUS_COLOR
-    
-    # Separator
-    y = height - 3
+    # --- Right panel: preview ---
     try:
+        stdscr.attron(curses.color_pair(1))
+        stdscr.addnstr(1, left_w, "-" * right_w, right_w)
+        stdscr.attroff(curses.color_pair(1))
+    except curses.error:
+        pass
+
+    if items:
+        item = items[SELECTED]
+        full = os.path.join(BASE_DIR, item['name']) if not REMOTE_MODE else item['name']
+        preview = get_preview(item['name'], item['is_dir'], full)
+        for i in range(max_rows):
+            y = 2 + i
+            try:
+                if i < len(preview):
+                    line = preview[i][:right_w-1]
+                    stdscr.addnstr(y, left_w, f" {line}", right_w)
+                else:
+                    stdscr.addnstr(y, left_w, " " * right_w, right_w)
+            except curses.error:
+                break
+    else:
+        try:
+            stdscr.addnstr(2, left_w, " Empty", right_w)
+        except curses.error:
+            pass
+
+    # --- Status bar ---
+    try:
+        y = height - 2
         stdscr.attron(curses.color_pair(1))
         stdscr.addnstr(y, 0, "-" * width, width)
         stdscr.attroff(curses.color_pair(1))
-        
+
         if STATUS_MSG:
             stdscr.attron(curses.color_pair(STATUS_COLOR) | curses.A_BOLD)
             stdscr.addnstr(y + 1, 0, f" {STATUS_MSG}".ljust(width), width)
             stdscr.attroff(curses.color_pair(STATUS_COLOR) | curses.A_BOLD)
         else:
-            proc = "ON" if PROCESO_INFO.get('pid') else "OFF"
             sort_label = {"name": "Name", "size": "Size", "date": "Date"}[SORT_BY]
-            status = f" Server: {proc} | Sort: {sort_label}{'<' if not SORT_REV else '>'} | Hidden: {'ON' if SHOW_HIDDEN else 'OFF'}"
-            stdscr.addnstr(y + 1, 0, status.ljust(width), width)
+            hidden = "ON" if SHOW_HIDDEN else "OFF"
+            status = f" h/j:Nav  Enter:Open  d:Download  H:Hidden  s:Sort  ?:Help  q:Quit | Sort:{sort_label} Hid:{hidden}"
+            stdscr.addnstr(y + 1, 0, status[:width], width)
     except curses.error:
         pass
-    
-    try:
-        help_text = " Up/Dn:Nav Enter:Open d:Del r:Ren n:Dir s:Sort ?:Help q:Quit "
-        stdscr.attron(curses.color_pair(5))
-        ht = help_text.center(width)
-        stdscr.addnstr(y + 2, 0, ht[:width], width)
-        stdscr.attroff(curses.color_pair(5))
-    except curses.error:
-        pass
+
+    stdscr.refresh()
 
 def show_help(stdscr, height, width):
-    """Show help overlay"""
-    help_lines = [
-        ("", ""),
-        ("  FileServer TUI - Ayuda", 1),
-        ("", ""),
-        ("  Navegación:", 3),
-        ("    ↑/k  Arriba", 0),
-        ("    ↓/j  Abajo", 0),
-        ("    Enter  Abrir carpeta / Ir atrás", 0),
-        ("    Backspace  Ir a carpeta padre", 0),
-        ("    ~  Ir al home", 0),
-        ("", ""),
-        ("  Archivos:", 3),
-        ("    d  Eliminar archivo/carpeta", 0),
-        ("    r  Renombrar", 0),
-        ("    n  Nueva carpeta", 0),
-        ("    Space  Info del archivo", 0),
-        ("", ""),
-        ("  Configuración:", 3),
-        ("    s  Cambiar orden (nombre/tamaño/fecha)", 0),
-        ("    R  Invertir orden", 0),
-        ("    H  Mostrar/ocultar archivos ocultos", 0),
-        ("", ""),
-        ("  Red:", 3),
-        ("    S  Iniciar/detener servidor web", 0),
-        ("", ""),
-        ("  Otros:", 3),
-        ("    ?  Esta ayuda", 0),
-        ("    q  Salir", 0),
-        ("", ""),
-        ("  Presiona cualquier tecla para cerrar", 5),
-    ]
-    
-    # Box
-    box_h = len(help_lines) + 2
-    box_w = 55
-    start_y = (height - box_h) // 2
-    start_x = (width - box_w) // 2
-    
-    # Draw box
-    for i in range(box_h):
-        y = start_y + i
-        if i == 0:
-            line = "+" + "─" * (box_w - 2) + "+"
-        elif i == box_h - 1:
-            line = "+" + "─" * (box_w - 2) + "+"
-        else:
-            content = help_lines[i-1][0] if i-1 < len(help_lines) else ""
-            color = help_lines[i-1][1] if i-1 < len(help_lines) else 0
-            line = "|" + content.ljust(box_w - 2) + "|"
-        
-        if i == 0 or i == box_h - 1:
-            stdscr.attron(curses.color_pair(1))
-            stdscr.addnstr(y, start_x, line, box_w)
-            stdscr.attroff(curses.color_pair(1))
-        elif color:
-            stdscr.attron(curses.color_pair(color) | curses.A_BOLD)
-            stdscr.addnstr(y, start_x, line, box_w)
-            stdscr.attroff(curses.color_pair(color) | curses.A_BOLD)
-        else:
-            stdscr.addnstr(y, start_x, line, box_w)
-    
-    stdscr.refresh()
-    stdscr.getch()
-
-def confirm_delete(stdscr, height, width, name):
-    """Show delete confirmation"""
-    msg = f" ¿Eliminar '{name}'? (y/N) "
-    x = (width - len(msg)) // 2
-    y = height // 2
-    
-    stdscr.attron(curses.color_pair(6) | curses.A_BOLD)
-    stdscr.addnstr(y, x, msg, len(msg))
-    stdscr.attroff(curses.color_pair(6) | curses.A_BOLD)
-    stdscr.refresh()
-    
-    ch = stdscr.getch()
-    return ch in (ord('y'), ord('Y'))
-
-def prompt_input(stdscr, height, width, prompt, default=""):
-    """Show input prompt"""
-    curses.echo()
-    curses.curs_set(1)
-    
-    msg = f" {prompt}: {default} "
-    x = max(0, (width - len(msg) - 20) // 2)
-    y = height // 2
-    
-    stdscr.attron(curses.color_pair(5) | curses.A_BOLD)
-    stdscr.addnstr(y, x, msg, width - x)
-    stdscr.attroff(curses.color_pair(5) | curses.A_BOLD)
-    stdscr.refresh()
-    
-    # Get input
-    stdscr.move(y, x + len(prompt) + 3)
-    stdscr.clrtoeol()
-    input_str = stdscr.getstr(y, x + len(prompt) + 3, 50).decode('utf-8', errors='replace')
-    
-    curses.noecho()
-    curses.curs_set(0)
-    return input_str if input_str else default
-
-def show_file_info(stdscr, height, width, f):
-    """Show file info overlay"""
-    full = os.path.join(BASE_DIR, f['name'])
     lines = [
-        f"  Nombre:  {f['name']}",
-        f"  Tipo:    {'Carpeta' if f['is_dir'] else Path(f['name']).suffix.upper() or 'Sin extensión'}",
-        f"  Tamaño:  {human_size(f['size']) if not f['is_dir'] else '<DIR>'}",
-        f"  Modificado: {f['date']}",
-        f"  Ruta:    {full}",
+        "FileServer TUI - Help",
+        "",
+        "Navigation:",
+        "  j/Down   Move down",
+        "  k/Up     Move up",
+        "  h/Left   Go to parent dir",
+        "  l/Right  Enter directory / select",
+        "  Enter    Enter directory / go back",
+        "  Backspace  Parent directory",
+        "  g        Go to top",
+        "  G        Go to bottom",
+        "",
+        "Actions:",
+        "  d        Download file to ~/storage/downloads/",
+        "  Space    Download file (alias for d)",
+        "  s        Sort by name/size/date",
+        "  R        Reverse sort order",
+        "  H        Toggle hidden files",
+        "",
+        "Remote:",
+        "  S        Toggle web server on/off",
+        "",
+        "  q        Quit",
     ]
-    
-    box_h = len(lines) + 4
-    box_w = max(50, max(len(l) for l in lines) + 6)
-    start_y = (height - box_h) // 2
-    start_x = (width - box_w) // 2
-    
-    for i in range(box_h):
-        y = start_y + i
-        if i == 0:
-            line = "+" + "─" * (box_w - 2) + "+"
-            stdscr.attron(curses.color_pair(1))
-            stdscr.addnstr(y, start_x, line, box_w)
-            stdscr.attroff(curses.color_pair(1))
-        elif i == box_h - 1:
-            line = "+" + "─" * (box_w - 2) + "+"
-            stdscr.attron(curses.color_pair(1))
-            stdscr.addnstr(y, start_x, line, box_w)
-            stdscr.attroff(curses.color_pair(1))
-        elif i - 1 < len(lines):
-            content = lines[i-1]
-            stdscr.addnstr(y, start_x, "|" + content.ljust(box_w - 2) + "|", box_w)
-    
-    stdscr.refresh()
-    stdscr.getch()
+    box_w = min(width - 4, 55)
+    box_h = len(lines) + 2
+    sy = max(0, (height - box_h) // 2)
+    sx = max(0, (width - box_w) // 2)
+    try:
+        for i in range(box_h):
+            y = sy + i
+            if i == 0:
+                stdscr.attron(curses.color_pair(1))
+                stdscr.addnstr(y, sx, "+" + "-" * (box_w - 2) + "+", box_w)
+                stdscr.attroff(curses.color_pair(1))
+            elif i == box_h - 1:
+                stdscr.attron(curses.color_pair(1))
+                stdscr.addnstr(y, sx, "+" + "-" * (box_w - 2) + "+", box_w)
+                stdscr.attroff(curses.color_pair(1))
+            elif i - 1 < len(lines):
+                content = lines[i-1]
+                color = 3 if i == 1 else (4 if content.endswith(":") else 0)
+                if color:
+                    stdscr.attron(curses.color_pair(color))
+                stdscr.addnstr(y, sx, "|" + content.ljust(box_w - 2) + "|", box_w)
+                if color:
+                    stdscr.attroff(curses.color_pair(color))
+        stdscr.refresh()
+        stdscr.getch()
+    except curses.error:
+        pass
 
-# ─── HTTP Server (background) ────────────────────────────
+# --- HTTP Server ---
 class QuietHandler(BaseHTTPRequestHandler):
     def log_message(self, *args):
-        pass  # Silence HTTP logs in TUI
-    
+        pass
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
         rel = urllib.parse.unquote(parsed.path.lstrip('/'))
         full = os.path.join(BASE_DIR, rel)
-        
         if 'getip' in query:
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({"ip": get_local_ip(), "hostname": get_hostname()}).encode())
+            self.wfile.write(json.dumps({"ip": "ok"}).encode())
             return
-        
-        if os.path.isdir(full):
+        if os.path.isdir(full) and 'json' in query:
+            items = []
+            try:
+                for e in sorted(os.listdir(full)):
+                    fp = os.path.join(full, e)
+                    is_d = os.path.isdir(fp)
+                    try:
+                        st = os.stat(fp)
+                        items.append({'name': e, 'is_dir': is_d, 'size': st.st_size if not is_d else 0, 'mtime': st.st_mtime, 'path': e})
+                    except:
+                        items.append({'name': e, 'is_dir': is_d, 'size': 0, 'mtime': 0, 'path': e})
+            except:
+                pass
             self.send_response(200)
-            self.send_header('Content-Type', 'text/html')
+            self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            self.wfile.write(self._dir_html(full, rel).encode())
-        elif os.path.isfile(full):
+            self.wfile.write(json.dumps({'path': rel or '/', 'items': items}).encode())
+            return
+        if os.path.isfile(full):
             mime, _ = mimetypes.guess_type(full)
             size = os.path.getsize(full)
             self.send_response(200)
@@ -502,60 +398,13 @@ class QuietHandler(BaseHTTPRequestHandler):
             self.end_headers()
             with open(full, 'rb') as f:
                 self.wfile.write(f.read())
+        elif os.path.isdir(full):
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html')
+            self.end_headers()
+            self.wfile.write(b"<html><body><h1>Directory</h1></body></html>")
         else:
             self.send_error(404)
-    
-    def do_POST(self):
-        parsed = urllib.parse.urlparse(self.path)
-        query = urllib.parse.parse_qs(parsed.query)
-        rel = urllib.parse.unquote(parsed.path.lstrip('/'))
-        dest = os.path.join(BASE_DIR, rel)
-        
-        if 'upload' in query:
-            ct = self.headers['Content-Type']
-            if 'multipart/form-data' not in ct:
-                self.send_error(400)
-                return
-            boundary = ct.split('boundary=')[1].encode()
-            cl = int(self.headers['Content-Length'])
-            body = self.rfile.read(cl)
-            parts = body.split(b'--' + boundary)
-            uploaded = []
-            for part in parts[2:]:
-                if b'filename="' not in part:
-                    continue
-                h_end = part.find(b'\r\n\r\n')
-                if h_end == -1:
-                    continue
-                header = part[:h_end].decode('utf-8', errors='replace')
-                data = part[h_end+4:]
-                if data.endswith(b'\r\n'):
-                    data = data[:-2]
-                fn_s = header.find('filename="') + 10
-                fn_e = header.find('"', fn_s)
-                filename = header[fn_s:fn_e]
-                if filename:
-                    os.makedirs(dest, exist_ok=True)
-                    with open(os.path.join(dest, filename), 'wb') as f:
-                        f.write(data)
-                    uploaded.append(filename)
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({"uploaded": uploaded}).encode())
-    
-    def _dir_html(self, dpath, rel):
-        items = []
-        for e in sorted(os.listdir(dpath)):
-            fp = os.path.join(dpath, e)
-            is_d = os.path.isdir(fp)
-            er = os.path.join(rel, e) if rel else e
-            items.append(f'<li><a href="/{urllib.parse.quote(er)}{"./" if is_d else "?download=true"}">{file_icon(e, is_d)} {e}{" /" if is_d else ""}</a></li>')
-        return f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>📁 {rel or 'Home'}</title>
-<style>body{{font-family:monospace;background:#0f172a;color:#e2e8f0;padding:20px}}
-a{{color:#60a5fa;text-decoration:none}}a:hover{{text-decoration:underline}}
-li{{padding:5px 0;font-size:1.1em}}</style></head>
-<body><h1>📁 {rel or 'Home'}</h1><ul>{"".join(items)}</ul></body></html>"""
 
 def start_server():
     global SERVER_RUNNING
@@ -568,102 +417,96 @@ def start_server():
     except:
         pass
 
-# ─── Main TUI ─────────────────────────────────────────────
+# --- Main ---
 def main(stdscr):
     global SELECTED, SCROLL, SORT_BY, SORT_REV, SHOW_HIDDEN
     global STATUS_MSG, STATUS_COLOR, SERVER_RUNNING, BASE_DIR
-    
-    # Colors
+
     curses.start_color()
     curses.use_default_colors()
-    curses.init_pair(1, curses.COLOR_BLUE, -1)      # Header/separator
-    curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_CYAN)  # Selected
-    curses.init_pair(3, curses.COLOR_YELLOW, -1)     # Column headers
-    curses.init_pair(4, curses.COLOR_GREEN, -1)      # Directories
-    curses.init_pair(5, curses.COLOR_WHITE, -1)      # Info
-    curses.init_pair(6, curses.COLOR_RED, -1)        # Warning
-    
+    curses.init_pair(1, curses.COLOR_BLUE, -1)
+    curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_CYAN)
+    curses.init_pair(3, curses.COLOR_YELLOW, -1)
+    curses.init_pair(4, curses.COLOR_GREEN, -1)
+    curses.init_pair(5, curses.COLOR_WHITE, -1)
+    curses.init_pair(6, curses.COLOR_RED, -1)
     curses.curs_set(0)
     stdscr.keypad(True)
     stdscr.timeout(-1)
-    
-    scan_files()
-    
+
+    if REMOTE_MODE:
+        scan_remote()
+    else:
+        scan_local()
+
     while True:
         height, width = stdscr.getmaxyx()
-        stdscr.erase()
-        
-        draw_header(stdscr, height, width)
-        draw_columns(stdscr, width)
-        draw_files(stdscr, height, width)
-        draw_status(stdscr, height, width)
-        
-        stdscr.refresh()
-        
+        draw_ui(stdscr, height, width)
         ch = stdscr.getch()
         STATUS_MSG = ""
-        
+        items = get_all_items()
+        total = len(items)
+
         if ch == ord('q') or ch == ord('Q'):
             SERVER_RUNNING = False
             break
-        
+
+        elif ch in (curses.KEY_DOWN, ord('j')):
+            SELECTED = min(total - 1, SELECTED + 1)
+
         elif ch in (curses.KEY_UP, ord('k')):
             SELECTED = max(0, SELECTED - 1)
-        
-        elif ch in (curses.KEY_DOWN, ord('j')):
-            SELECTED = min(len(FILE_LIST) - 1, SELECTED + 1)
-        
-        elif ch in (curses.KEY_ENTER, 10, 13):
-            if FILE_LIST:
-                f = FILE_LIST[SELECTED]
-                if f['is_dir']:
-                    new_dir = os.path.join(BASE_DIR, f['name'])
-                    if f['name'] == '..':
-                        new_dir = os.path.dirname(BASE_DIR.rstrip('/'))
-                    BASE_DIR = new_dir
+
+        elif ch in (curses.KEY_ENTER, 10, 13, ord('l'), curses.KEY_RIGHT):
+            if items:
+                item = items[SELECTED]
+                if item['is_dir']:
+                    if item['name'] == '..':
+                        BASE_DIR = os.path.dirname(BASE_DIR.rstrip('/')) or '/'
+                    else:
+                        BASE_DIR = os.path.join(BASE_DIR, item['name']) if not BASE_DIR.endswith('/') else BASE_DIR + item['name']
                     SELECTED = 0
                     SCROLL = 0
-                    scan_files()
-                    STATUS_MSG = f"📂 {BASE_DIR}"
+                    if REMOTE_MODE:
+                        scan_remote()
+                    else:
+                        scan_local()
+                    STATUS_MSG = BASE_DIR
                     STATUS_COLOR = 4
-        
-        elif ch == curses.KEY_BACKSPACE or ch == 127:
+
+        elif ch == curses.KEY_BACKSPACE or ch == 127 or ch == ord('h') or ch == curses.KEY_LEFT:
             parent = os.path.dirname(BASE_DIR.rstrip('/'))
             if parent and parent != BASE_DIR:
-                BASE_DIR = parent
+                BASE_DIR = parent or '/'
                 SELECTED = 0
                 SCROLL = 0
-                scan_files()
-                STATUS_MSG = f"📂 {BASE_DIR}"
+                if REMOTE_MODE:
+                    scan_remote()
+                else:
+                    scan_local()
+                STATUS_MSG = BASE_DIR
                 STATUS_COLOR = 4
-        
-        elif ch == ord('~'):
-            BASE_DIR = os.path.expanduser("~")
-            SELECTED = 0
-            SCROLL = 0
-            scan_files()
-            STATUS_MSG = f"📂 {BASE_DIR}"
-            STATUS_COLOR = 4
-        
+
+        elif ch in (ord('d'), ord(' '), ord('D')):
+            if items:
+                item = items[SELECTED]
+                if not item['is_dir']:
+                    STATUS_MSG = f"Downloading {item['name']}..."
+                    STATUS_COLOR = 3
+                    draw_ui(stdscr, height, width)
+                    ok, result = download_file(item['name'])
+                    if ok:
+                        STATUS_MSG = f"Downloaded: {result}"
+                        STATUS_COLOR = 4
+                    else:
+                        STATUS_MSG = f"Error: {result}"
+                        STATUS_COLOR = 6
+
         elif ch == ord('s') or ch == ord('S'):
             if ch == ord('S'):
-                # Start/stop server
-                if PROCESO_INFO.get('pid'):
-                    subprocess.run(["kill", PROCESO_INFO['pid']], capture_output=True)
-                    PROCESO_INFO = {}
-                    STATUS_MSG = "🔴 Servidor detenido"
-                    STATUS_COLOR = 6
-                else:
-                    subprocess.Popen(
-                        ["python3", os.path.abspath(__file__), BASE_DIR, "--port", str(PORT), "--no-tui"],
-                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                    )
-                    time.sleep(0.5)
-                    scan_files()
-                    STATUS_MSG = f"🟢 Servidor iniciado en :{PORT}"
-                    STATUS_COLOR = 4
+                # Toggle web server
+                pass  # TODO
             else:
-                # Sort cycle
                 if SORT_BY == "name":
                     SORT_BY = "size"
                 elif SORT_BY == "size":
@@ -672,96 +515,54 @@ def main(stdscr):
                     SORT_BY = "name"
                 SELECTED = 0
                 SCROLL = 0
-                scan_files()
-                STATUS_MSG = f"📋 Ordenado por: {SORT_BY}"
-                STATUS_COLOR = 3
-        
+                if REMOTE_MODE:
+                    scan_remote()
+                else:
+                    scan_local()
+
         elif ch == ord('R'):
             SORT_REV = not SORT_REV
             SELECTED = 0
             SCROLL = 0
-            scan_files()
-            STATUS_MSG = f"🔄 Orden {'invertido' if SORT_REV else 'normal'}"
-            STATUS_COLOR = 3
-        
+            if REMOTE_MODE:
+                scan_remote()
+            else:
+                scan_local()
+
         elif ch == ord('h') or ch == ord('H'):
-            if ch == 'H':
-                pass
-            SHOW_HIDDEN = not SHOW_HIDDEN
+            if ch == ord('H'):
+                SHOW_HIDDEN = not SHOW_HIDDEN
+                SELECTED = 0
+                SCROLL = 0
+                if REMOTE_MODE:
+                    scan_remote()
+                else:
+                    scan_local()
+
+        elif ch == ord('g'):
             SELECTED = 0
             SCROLL = 0
-            scan_files()
-            STATUS_MSG = f"👁️ Ocultos: {'MOSTRANDO' if SHOW_HIDDEN else 'OCULTOS'}"
-            STATUS_COLOR = 3
-        
-        elif ch == ord('d') or ch == ord('D'):
-            if FILE_LIST:
-                f = FILE_LIST[SELECTED]
-                if confirm_delete(stdscr, height, width, f['name']):
-                    full = os.path.join(BASE_DIR, f['name'])
-                    try:
-                        if f['is_dir']:
-                            import shutil
-                            shutil.rmtree(full)
-                        else:
-                            os.remove(full)
-                        scan_files()
-                        STATUS_MSG = f"🗑️ Eliminado: {f['name']}"
-                        STATUS_COLOR = 6
-                    except Exception as e:
-                        STATUS_MSG = f"❌ Error: {e}"
-                        STATUS_COLOR = 6
-        
-        elif ch == ord('r'):
-            if FILE_LIST:
-                f = FILE_LIST[SELECTED]
-                new_name = prompt_input(stdscr, height, width, "Renombrar", f['name'])
-                if new_name and new_name != f['name']:
-                    old = os.path.join(BASE_DIR, f['name'])
-                    new = os.path.join(BASE_DIR, new_name)
-                    try:
-                        os.rename(old, new)
-                        scan_files()
-                        STATUS_MSG = f"✏️ Renombrado: {f['name']} → {new_name}"
-                        STATUS_COLOR = 4
-                    except Exception as e:
-                        STATUS_MSG = f"❌ Error: {e}"
-                        STATUS_COLOR = 6
-        
-        elif ch == ord('n'):
-            dirname = prompt_input(stdscr, height, width, "Nueva carpeta")
-            if dirname:
-                try:
-                    os.makedirs(os.path.join(BASE_DIR, dirname), exist_ok=True)
-                    scan_files()
-                    STATUS_MSG = f"📁 Carpeta creada: {dirname}"
-                    STATUS_COLOR = 4
-                except Exception as e:
-                    STATUS_MSG = f"❌ Error: {e}"
-                    STATUS_COLOR = 6
-        
-        elif ch == ord(' '):
-            if FILE_LIST:
-                show_file_info(stdscr, height, width, FILE_LIST[SELECTED])
-        
+
+        elif ch == ord('G'):
+            SELECTED = max(0, total - 1)
+
         elif ch == ord('?'):
             show_help(stdscr, height, width)
-        
+
         elif ch == curses.KEY_RESIZE:
             stdscr.clear()
 
-# ─── Entry ────────────────────────────────────────────────
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="FileServer TUI")
+    parser = argparse.ArgumentParser(description="FileServer TUI - Yazi style")
     parser.add_argument("directory", nargs="?", default=os.path.expanduser("~/storage"))
     parser.add_argument("--port", "-p", type=int, default=8080)
-    parser.add_argument("--remote", "-r", help="Remote host (e.g. cachyos-x8664)")
+    parser.add_argument("--remote", "-r", help="Remote host")
     parser.add_argument("--remote-port", type=int, default=8080)
-    parser.add_argument("--no-tui", action="store_true", help="Run server only (no TUI)")
+    parser.add_argument("--no-tui", action="store_true")
     args = parser.parse_args()
-    
+
     PORT = args.port
-    
+
     if args.remote:
         REMOTE_HOST = args.remote
         REMOTE_PORT = args.remote_port
@@ -770,27 +571,19 @@ if __name__ == "__main__":
     else:
         BASE_DIR = os.path.abspath(args.directory)
         if not os.path.isdir(BASE_DIR):
-            print(f"Carpeta no encontrada: {BASE_DIR}")
+            print(f"Not found: {BASE_DIR}")
             sys.exit(1)
-    
+
     if args.no_tui:
-        # Server-only mode
         server = HTTPServer(("0.0.0.0", PORT), QuietHandler)
         server.serve_forever()
     else:
-        # Start server in background
-        server_thread = threading.Thread(target=start_server, daemon=True)
-        server_thread.start()
-        
-        ip = get_local_ip()
-        hostname = get_hostname()
-        
-        # Run TUI
+        t = threading.Thread(target=start_server, daemon=True)
+        t.start()
         try:
             curses.wrapper(main)
         except KeyboardInterrupt:
             pass
         finally:
             SERVER_RUNNING = False
-            print(f"\n📁 FileServer detenido.")
-            print(f"   Server: http://{hostname}:{PORT}")
+            print(f"\nFileServer stopped. Server was at :{PORT}")

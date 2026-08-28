@@ -279,7 +279,7 @@ fetch(baseUrl + '?getip=true')
   .then(r => r.json())
   .then(data => {
     document.getElementById('ip').textContent = data.ip;
-    document.getElementById('host').textContent = data.hostname + '.ts.net';
+    document.getElementById('host').textContent = data.hostname;
   })
   .catch(() => {
     document.getElementById('ip').textContent = 'N/A';

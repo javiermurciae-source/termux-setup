@@ -57,21 +57,23 @@ alias json='jq'
 alias sysinfo='fastfetch'
 alias info='fastfetch'
 
-# Tailscale on-demand
-alias tsup='rm -f ~/.tailscale/tailscaled.sock; screen -dmS tailscale bash -c "tailscaled --statedir=$HOME/.tailscale --socket=$HOME/.tailscale/tailscaled.sock --tun=userspace-networking --socks5-server=localhost:1055"; sleep 8; tailscale-cli status 2>/dev/null | head -3'
-alias tsdown='killall -9 tailscaled 2>/dev/null; rm -f ~/.tailscale/tailscaled.sock; screen -S tailscale -X quit 2>/dev/null; echo "Tailscale apagado"'
-alias tsstatus='tailscale-cli status 2>/dev/null || echo "Tailscale apagado. Usa tsup para encender."'
-alias tspc='tailscale-cli ssh rootkit@cachyos-x8664'
+# Tailscale - la app maneja todo, no necesitamos daemon en Termux
+alias tsup='echo "Abre http://cachyos-x8664:8081 en tu navegador"'
+alias tsdown='echo "Cierra la app Tailscale desde la notificacion"'
+alias tsstatus='curl -s --connect-timeout 3 http://cachyos-x8664:8081/ >/dev/null 2>&1 && echo "PC: Online" || echo "PC: Offline - abre la app Tailscale"'
+alias tspc='curl -s --connect-timeout 3 http://cachyos-x8664:8081/ >/dev/null 2>&1 && echo "Abre http://cachyos-x8664:8081" || echo "PC offline"'
 
-# FileServer - Compartir archivos por red
-alias fs='python3 ~/storage/termux-setup/scripts/fileserver-tui.py'
-alias fs-down='python3 ~/storage/termux-setup/scripts/fileserver-tui.py ~/storage/downloads'
-alias fs-share='python3 ~/storage/termux-setup/scripts/fileserver-tui.py ~'
-alias fileserver='python3 ~/storage/termux-setup/scripts/fileserver.py'
-alias fileserver-web='python3 ~/storage/termux-setup/scripts/fileserver.py ~'
+# FileBrowser - gestor de archivos web
+alias fb='screen -dmS filebrowser filebrowser -r ~/storage -a 0.0.0.0 -p 8081 -d ~/.filebrowser.db --noauth; sleep 1; echo "http://tailscale-termux:8081"'
+alias fb-stop='screen -S filebrowser -X quit 2>/dev/null; pkill filebrowser 2>/dev/null; echo "stopped"'
+alias fb-pc='tailscale-cli ssh rootkit@cachyos-x8664 "bash -c \"nohup filebrowser -r /home/rootkit -a 0.0.0.0 -p 8081 -d ~/.filebrowser.db --noauth >/dev/null 2>&1 &\"" 2>/dev/null; echo "http://cachyos-x8664:8081"'
 
 # Sincronizador Maestro
 alias sync-setup='curl -sL https://raw.githubusercontent.com/javiermurciae-source/termux-setup/main/setup-todo -o ~/.setup-todo.sh && rm -f ~/.core_setup_done && bash ~/.setup-todo.sh </dev/tty>'
 
 set -gx PATH $HOME/.local/bin $PATH
 set -gx JAVA_HOME $PREFIX
+
+
+
+

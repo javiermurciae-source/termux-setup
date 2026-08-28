@@ -61,7 +61,7 @@ alias info='fastfetch'
 alias tsup='echo "Abre http://cachyos-x8664:8081 en tu navegador"'
 alias tsdown='echo "Cierra la app Tailscale desde la notificacion"'
 alias tsstatus='curl -s --connect-timeout 3 http://cachyos-x8664:8081/ >/dev/null 2>&1 && echo "PC: Online" || echo "PC: Offline - abre la app Tailscale"'
-alias tspc='curl -s --connect-timeout 3 http://cachyos-x8664:8081/ >/dev/null 2>&1 && echo "Abre http://cachyos-x8664:8081" || echo "PC offline"'
+alias tspc='ssh -o ConnectTimeout=5 rootkit@cachyos-x8664'
 
 # FileBrowser - gestor de archivos web
 alias fb='screen -dmS filebrowser filebrowser -r ~/storage -a 0.0.0.0 -p 8081 -d ~/.filebrowser.db --noauth; sleep 1; echo "http://tailscale-termux:8081"'

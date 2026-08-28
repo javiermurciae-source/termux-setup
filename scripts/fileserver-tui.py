@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-📁 FileServer TUI - Terminal User Interface
+FileServer TUI - Terminal User Interface
 Gestor de archivos con interfaz de terminal para compartir por red
 
 Uso:
@@ -158,34 +158,40 @@ def draw_header(stdscr, height, width):
     file_count = len(FILE_LIST) - dir_count
     total_size = sum(f['size'] for f in FILE_LIST if not f['is_dir'])
     
-    # Title bar
-    title = f" 📁 FileServer TUI "
-    stdscr.attron(curses.color_pair(1) | curses.A_BOLD)
-    stdscr.addnstr(0, 0, title.ljust(width), width)
-    stdscr.attroff(curses.color_pair(1) | curses.A_BOLD)
-    
-    # Info bar
-    info = f" 🌐 {hostname} ({ip}:{PORT}) │ 📂 {BASE_DIR} │ 📁 {dir_count} dirs │ 📄 {file_count} files │ 💾 {human_size(total_size)}"
-    stdscr.attron(curses.color_pair(5))
-    stdscr.addnstr(1, 0, info.ljust(width), width)
-    stdscr.attroff(curses.color_pair(5))
-    
-    # Separator
-    stdscr.attron(curses.color_pair(1))
-    stdscr.addnstr(2, 0, "─" * width, width)
-    stdscr.attroff(curses.color_pair(1))
+    try:
+        # Title bar
+        title = " [ FileServer TUI ] "
+        stdscr.attron(curses.color_pair(1) | curses.A_BOLD)
+        stdscr.addnstr(0, 0, title.ljust(width), width)
+        stdscr.attroff(curses.color_pair(1) | curses.A_BOLD)
+        
+        # Info bar
+        info = f" {hostname} ({ip}:{PORT}) | {BASE_DIR} | {dir_count}d {file_count}f {human_size(total_size)}"
+        stdscr.attron(curses.color_pair(5))
+        stdscr.addnstr(1, 0, info.ljust(width), width)
+        stdscr.attroff(curses.color_pair(5))
+        
+        # Separator
+        stdscr.attron(curses.color_pair(1))
+        stdscr.addnstr(2, 0, "-" * width, width)
+        stdscr.attroff(curses.color_pair(1))
+    except curses.error:
+        pass
 
 def draw_columns(stdscr, width):
     """Draw column headers"""
     y = 3
-    cols = f" {'Icon':<4} {'Name':<40} {'Size':>10} {'Date':<16} {'Type':<6}"
-    stdscr.attron(curses.color_pair(3) | curses.A_BOLD)
-    stdscr.addnstr(y, 0, cols.ljust(width), width)
-    stdscr.attroff(curses.color_pair(3) | curses.A_BOLD)
-    
-    stdscr.attron(curses.color_pair(1))
-    stdscr.addnstr(y + 1, 0, "─" * width, width)
-    stdscr.attroff(curses.color_pair(1))
+    try:
+        cols = f" {'Icon':<4} {'Name':<40} {'Size':>10} {'Date':<16} {'Type':<6}"
+        stdscr.attron(curses.color_pair(3) | curses.A_BOLD)
+        stdscr.addnstr(y, 0, cols.ljust(width), width)
+        stdscr.attroff(curses.color_pair(3) | curses.A_BOLD)
+        
+        stdscr.attron(curses.color_pair(1))
+        stdscr.addnstr(y + 1, 0, "-" * width, width)
+        stdscr.attroff(curses.color_pair(1))
+    except curses.error:
+        pass
 
 def draw_files(stdscr, height, width):
     """Draw file list"""
@@ -216,12 +222,11 @@ def draw_files(stdscr, height, width):
             continue
         
         f = FILE_LIST[idx]
-        icon = file_icon(f['name'], f['is_dir'])
+        icon = "D" if f['is_dir'] else "F"
         name = f['name']
         if f['is_dir']:
             name += "/"
         
-        # Truncate name
         max_name = width - 40
         if len(name) > max_name:
             name = name[:max_name-2] + ".."
@@ -233,16 +238,19 @@ def draw_files(stdscr, height, width):
         
         line = f" {icon} {name:<{max_name}} {size_str:>10} {f['date']:<16} {ext:<6}"
         
-        if idx == SELECTED:
-            stdscr.attron(curses.color_pair(2) | curses.A_BOLD)
-            stdscr.addnstr(y, 0, line.ljust(width), width)
-            stdscr.attroff(curses.color_pair(2) | curses.A_BOLD)
-        elif f['is_dir']:
-            stdscr.attron(curses.color_pair(4))
-            stdscr.addnstr(y, 0, line.ljust(width), width)
-            stdscr.attroff(curses.color_pair(4))
-        else:
-            stdscr.addnstr(y, 0, line.ljust(width), width)
+        try:
+            if idx == SELECTED:
+                stdscr.attron(curses.color_pair(2) | curses.A_BOLD)
+                stdscr.addnstr(y, 0, line.ljust(width), width)
+                stdscr.attroff(curses.color_pair(2) | curses.A_BOLD)
+            elif f['is_dir']:
+                stdscr.attron(curses.color_pair(4))
+                stdscr.addnstr(y, 0, line.ljust(width), width)
+                stdscr.attroff(curses.color_pair(4))
+            else:
+                stdscr.addnstr(y, 0, line.ljust(width), width)
+        except curses.error:
+            break
 
 def draw_status(stdscr, height, width):
     """Draw status bar"""
@@ -250,33 +258,37 @@ def draw_status(stdscr, height, width):
     
     # Separator
     y = height - 3
-    stdscr.attron(curses.color_pair(1))
-    stdscr.addnstr(y, 0, "─" * width, width)
-    stdscr.attroff(curses.color_pair(1))
+    try:
+        stdscr.attron(curses.color_pair(1))
+        stdscr.addnstr(y, 0, "-" * width, width)
+        stdscr.attroff(curses.color_pair(1))
+        
+        if STATUS_MSG:
+            stdscr.attron(curses.color_pair(STATUS_COLOR) | curses.A_BOLD)
+            stdscr.addnstr(y + 1, 0, f" {STATUS_MSG}".ljust(width), width)
+            stdscr.attroff(curses.color_pair(STATUS_COLOR) | curses.A_BOLD)
+        else:
+            proc = "ON" if PROCESO_INFO.get('pid') else "OFF"
+            sort_label = {"name": "Name", "size": "Size", "date": "Date"}[SORT_BY]
+            status = f" Server: {proc} | Sort: {sort_label}{'<' if not SORT_REV else '>'} | Hidden: {'ON' if SHOW_HIDDEN else 'OFF'}"
+            stdscr.addnstr(y + 1, 0, status.ljust(width), width)
+    except curses.error:
+        pass
     
-    # Status message
-    if STATUS_MSG:
-        stdscr.attron(curses.color_pair(STATUS_COLOR) | curses.A_BOLD)
-        stdscr.addnstr(y + 1, 0, f" {STATUS_MSG}".ljust(width), width)
-        stdscr.attroff(curses.color_pair(STATUS_COLOR) | curses.A_BOLD)
-    else:
-        # Server status
-        proc = "🟢 ON" if PROCESO_INFO.get('pid') else "🔴 OFF"
-        sort_label = {"name": "Name", "size": "Size", "date": "Date"}[SORT_BY]
-        status = f" Server: {proc} │ Sort: {sort_label}{'↓' if not SORT_REV else '↑'} │ Hidden: {'ON' if SHOW_HIDDEN else 'OFF'}"
-        stdscr.addnstr(y + 1, 0, status.ljust(width), width)
-    
-    # Help bar
-    help_text = " ↑↓:Navigate  Enter:Open  d:Delete  r:Rename  n:NewDir  s:Sort  h:Hidden  ?:Help  q:Quit "
-    stdscr.attron(curses.color_pair(5))
-    stdscr.addnstr(y + 2, 0, help_text.center(width)[:width], width)
-    stdscr.attroff(curses.color_pair(5))
+    try:
+        help_text = " Up/Dn:Nav Enter:Open d:Del r:Ren n:Dir s:Sort ?:Help q:Quit "
+        stdscr.attron(curses.color_pair(5))
+        ht = help_text.center(width)
+        stdscr.addnstr(y + 2, 0, ht[:width], width)
+        stdscr.attroff(curses.color_pair(5))
+    except curses.error:
+        pass
 
 def show_help(stdscr, height, width):
     """Show help overlay"""
     help_lines = [
         ("", ""),
-        ("  📁 FileServer TUI - Ayuda", 1),
+        ("  FileServer TUI - Ayuda", 1),
         ("", ""),
         ("  Navegación:", 3),
         ("    ↑/k  Arriba", 0),
@@ -316,13 +328,13 @@ def show_help(stdscr, height, width):
     for i in range(box_h):
         y = start_y + i
         if i == 0:
-            line = "┌" + "─" * (box_w - 2) + "┐"
+            line = "+" + "─" * (box_w - 2) + "+"
         elif i == box_h - 1:
-            line = "└" + "─" * (box_w - 2) + "┘"
+            line = "+" + "─" * (box_w - 2) + "+"
         else:
             content = help_lines[i-1][0] if i-1 < len(help_lines) else ""
             color = help_lines[i-1][1] if i-1 < len(help_lines) else 0
-            line = "│" + content.ljust(box_w - 2) + "│"
+            line = "|" + content.ljust(box_w - 2) + "|"
         
         if i == 0 or i == box_h - 1:
             stdscr.attron(curses.color_pair(1))
@@ -394,18 +406,18 @@ def show_file_info(stdscr, height, width, f):
     for i in range(box_h):
         y = start_y + i
         if i == 0:
-            line = "┌" + "─" * (box_w - 2) + "┐"
+            line = "+" + "─" * (box_w - 2) + "+"
             stdscr.attron(curses.color_pair(1))
             stdscr.addnstr(y, start_x, line, box_w)
             stdscr.attroff(curses.color_pair(1))
         elif i == box_h - 1:
-            line = "└" + "─" * (box_w - 2) + "┘"
+            line = "+" + "─" * (box_w - 2) + "+"
             stdscr.attron(curses.color_pair(1))
             stdscr.addnstr(y, start_x, line, box_w)
             stdscr.attroff(curses.color_pair(1))
         elif i - 1 < len(lines):
             content = lines[i-1]
-            stdscr.addnstr(y, start_x, "│" + content.ljust(box_w - 2) + "│", box_w)
+            stdscr.addnstr(y, start_x, "|" + content.ljust(box_w - 2) + "|", box_w)
     
     stdscr.refresh()
     stdscr.getch()
@@ -693,7 +705,7 @@ def main(stdscr):
 
 # ─── Entry ────────────────────────────────────────────────
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="📁 FileServer TUI")
+    parser = argparse.ArgumentParser(description="FileServer TUI")
     parser.add_argument("directory", nargs="?", default=os.path.expanduser("~/storage"))
     parser.add_argument("--port", "-p", type=int, default=8080)
     parser.add_argument("--no-tui", action="store_true", help="Run server only (no TUI)")

@@ -47,11 +47,3 @@ alias sync-setup='curl -sL https://raw.githubusercontent.com/javiermurciae-sourc
 
 set -gx PATH $HOME/.local/bin $PATH
 set -gx JAVA_HOME $PREFIX
-
-# Kitten (Kitty features)
-alias kicat='kitten icat'
-alias kssh='kitten ssh rootkit@cachyos-x8664'
-alias ktransfer='kitten transfer'
-alias kdiff='kitten diff'
-alias kclip='kitten clipboard'
-alias knotify='kitten notify'

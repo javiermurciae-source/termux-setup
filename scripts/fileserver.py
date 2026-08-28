@@ -46,6 +46,26 @@ def get_local_ip():
     except:
         return "localhost"
 
+
+def get_hostname():
+    """Obtiene el hostname de Tailscale (estable, no cambia)"""
+    try:
+        result = subprocess.run(
+            ["tailscale-cli", "status"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            for line in result.stdout.strip().split('\n'):
+                parts = line.split()
+                if len(parts) >= 2 and parts[1] != 'hostname':
+                    return parts[1]
+    except:
+        pass
+    try:
+        return socket.gethostname()
+    except:
+        return "unknown"
+
 def human_size(size):
     """Tamaño legible"""
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
@@ -168,6 +188,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <h1>📁 FileServer</h1>
   <div class="info">
     🌐 <span id="ip">Cargando IP...</span> &nbsp;|&nbsp;
+    🖥️ <span id="host">Cargando hostname...</span> &nbsp;|&nbsp;
     ⏱️ <span id="time"></span>
   </div>
 </div>
@@ -253,11 +274,17 @@ function formatSize(bytes) {
   return bytes.toFixed(1) + ' ' + units[i];
 }
 
-// Load IP
+// Load IP & hostname
 fetch(baseUrl + '?getip=true')
-  .then(r => r.text())
-  .then(ip => document.getElementById('ip').textContent = ip)
-  .catch(() => document.getElementById('ip').textContent = 'N/A');
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('ip').textContent = data.ip;
+    document.getElementById('host').textContent = data.hostname + '.ts.net';
+  })
+  .catch(() => {
+    document.getElementById('ip').textContent = 'N/A';
+    document.getElementById('host').textContent = 'N/A';
+  });
 
 // Time
 document.getElementById('time').textContent = new Date().toLocaleString('es');
@@ -277,12 +304,16 @@ class FileHandler(http.server.BaseHTTPRequestHandler):
         rel_path = urllib.parse.unquote(parsed.path.lstrip('/'))
         full_path = os.path.join(BASE_DIR, rel_path)
         
-        # Get IP
+        # Get IP + hostname
         if 'getip' in query:
             self.send_response(200)
-            self.send_header('Content-Type', 'text/plain')
+            self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            self.wfile.write(get_local_ip().encode())
+            data = json.dumps({
+                "ip": get_local_ip(),
+                "hostname": get_hostname()
+            })
+            self.wfile.write(data.encode())
             return
         
         # Download directory as ZIP
@@ -521,15 +552,16 @@ def main():
         sys.exit(1)
     
     ip = get_local_ip()
+    hostname = get_hostname()
     
     print(f"""
 \033[36m╔══════════════════════════════════════════════╗
 ║          📁 FileServer v1.0                   ║
 ╠══════════════════════════════════════════════╣
 ║                                              ║
-║  🌐 URL:   \033[33mhttp://{ip}:{PORT}\033[36m         
-║  📂 Sirve: \033[33m{BASE_DIR[:40]}\033[36m
-║  📱 Tailscale: \033[33mhttp://{ip}:{PORT}\033[36m
+║  🌐 IP:       \033[33mhttp://{ip}:{PORT}\033[36m     
+║  🖥️ Hostname: \033[33mhttp://{hostname}.ts.net:{PORT}\033[36m
+║  📂 Sirve:    \033[33m{BASE_DIR[:37]}\033[36m
 ║                                              ║
 ║  ⚡ Ctrl+C para detener                       ║
 ╚══════════════════════════════════════════════╝\033[0m

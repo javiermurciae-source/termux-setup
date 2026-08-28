@@ -102,13 +102,21 @@ def get_hostname():
         return "unknown"
 
 def scan_files_remote():
-    """Fetch file listing from remote FileServer"""
+    """Fetch file listing from remote FileServer via SOCKS5 proxy"""
     global FILE_LIST, PROCESO_INFO
     FILE_LIST = []
     try:
-        url = f"http://{REMOTE_HOST}:{REMOTE_PORT}{BASE_DIR}?json=true"
-        req = urllib.request.urlopen(url, timeout=5)
-        data = json.loads(req.read().decode())
+        path = BASE_DIR if BASE_DIR.startswith('/') else '/' + BASE_DIR
+        url = f"http://{REMOTE_HOST}:{REMOTE_PORT}{path}?json=true"
+        r = subprocess.run(
+            ["curl", "-s", "--connect-timeout", "5",
+             "--socks5-hostname", "127.0.0.1:1055", url],
+            capture_output=True, text=True, timeout=10
+        )
+        if r.returncode != 0 or not r.stdout.strip():
+            STATUS_MSG = f"Connection error"
+            return
+        data = json.loads(r.stdout)
         for item in data.get('items', []):
             if not SHOW_HIDDEN and item['name'].startswith('.'):
                 continue

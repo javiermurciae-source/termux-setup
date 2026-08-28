@@ -51,6 +51,12 @@ def human_size(size):
 def file_ext(name):
     return Path(name).suffix.lower()
 
+def safe_size(path):
+    try:
+        return human_size(os.path.getsize(path))
+    except:
+        return '?'
+
 def get_preview(name, is_dir, full_path):
     ext = file_ext(name)
     if is_dir:
@@ -76,21 +82,21 @@ def get_preview(name, is_dir, full_path):
         except:
             return ["  [Cannot read]"]
     elif ext in ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'):
-        return ["  [Image]", f"  {ext.upper()}", f"  {human_size(os.path.getsize(full_path))}"]
+        return ["  [Image]", f"  {ext.upper()}", f"  {safe_size(full_path)}"]
     elif ext in ('.mp4', '.avi', '.mkv', '.mov', '.webm'):
-        return ["  [Video]", f"  {ext.upper()}", f"  {human_size(os.path.getsize(full_path))}"]
+        return ["  [Video]", f"  {ext.upper()}", f"  {safe_size(full_path)}"]
     elif ext in ('.mp3', '.wav', '.ogg', '.m4a', '.flac'):
-        return ["  [Audio]", f"  {ext.upper()}", f"  {human_size(os.path.getsize(full_path))}"]
+        return ["  [Audio]", f"  {ext.upper()}", f"  {safe_size(full_path)}"]
     elif ext in ('.zip', '.tar', '.gz', '.rar', '.7z'):
-        return ["  [Archive]", f"  {ext.upper()}", f"  {human_size(os.path.getsize(full_path))}"]
+        return ["  [Archive]", f"  {ext.upper()}", f"  {safe_size(full_path)}"]
     elif ext in ('.pdf',):
-        return ["  [PDF]", f"  {human_size(os.path.getsize(full_path))}"]
+        return ["  [PDF]", f"  {safe_size(full_path)}"]
     elif ext in ('.eap', '.eapx'):
-        return ["  [Enterprise Architect]", f"  {human_size(os.path.getsize(full_path))}"]
+        return ["  [Enterprise Architect]", f"  {safe_size(full_path)}"]
     elif ext in ('.apk',):
-        return ["  [Android Package]", f"  {human_size(os.path.getsize(full_path))}"]
+        return ["  [Android Package]", f"  {safe_size(full_path)}"]
     else:
-        return ["  [File]", f"  {ext or 'no ext'}", f"  {human_size(os.path.getsize(full_path))}"]
+        return ["  [File]", f"  {ext or 'no ext'}", f"  {safe_size(full_path)}"]
 
 def scan_local():
     global DIRS, FILES

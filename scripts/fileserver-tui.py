@@ -524,7 +524,7 @@ def start_server():
 # ─── Main TUI ─────────────────────────────────────────────
 def main(stdscr):
     global SELECTED, SCROLL, SORT_BY, SORT_REV, SHOW_HIDDEN
-    global STATUS_MSG, STATUS_COLOR, SERVER_RUNNING
+    global STATUS_MSG, STATUS_COLOR, SERVER_RUNNING, BASE_DIR
     
     # Colors
     curses.start_color()

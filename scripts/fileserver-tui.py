@@ -24,11 +24,15 @@ import mimetypes
 import urllib.parse
 from pathlib import Path
 from datetime import datetime
+import urllib.request
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ─── Globals ──────────────────────────────────────────────
 BASE_DIR = ""
 PORT = 8080
+REMOTE_HOST = ""
+REMOTE_PORT = 8080
+REMOTE_MODE = False
 FILE_LIST = []
 SELECTED = 0
 SCROLL = 0
@@ -97,8 +101,43 @@ def get_hostname():
     except:
         return "unknown"
 
+def scan_files_remote():
+    """Fetch file listing from remote FileServer"""
+    global FILE_LIST, PROCESO_INFO
+    FILE_LIST = []
+    try:
+        url = f"http://{REMOTE_HOST}:{REMOTE_PORT}{BASE_DIR}?json=true"
+        req = urllib.request.urlopen(url, timeout=5)
+        data = json.loads(req.read().decode())
+        for item in data.get('items', []):
+            if not SHOW_HIDDEN and item['name'].startswith('.'):
+                continue
+            FILE_LIST.append({
+                'name': item['name'],
+                'is_dir': item['is_dir'],
+                'size': item['size'],
+                'mtime': item['mtime'],
+                'date': datetime.fromtimestamp(item['mtime']).strftime('%Y-%m-%d %H:%M'),
+            })
+    except Exception as e:
+        STATUS_MSG = f"Error: {e}"
+    
+    def sort_key(f):
+        if f['is_dir']:
+            return (0, f['name'].lower())
+        if SORT_BY == 'size':
+            return (1, f['size'])
+        elif SORT_BY == 'date':
+            return (1, f['mtime'])
+        return (1, f['name'].lower())
+    
+    FILE_LIST.sort(key=sort_key, reverse=SORT_REV)
+
 def scan_files():
     global FILE_LIST, PROCESO_INFO
+    if REMOTE_MODE:
+        scan_files_remote()
+        return
     FILE_LIST = []
     try:
         entries = sorted(os.listdir(BASE_DIR))
@@ -708,15 +747,23 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="FileServer TUI")
     parser.add_argument("directory", nargs="?", default=os.path.expanduser("~/storage"))
     parser.add_argument("--port", "-p", type=int, default=8080)
+    parser.add_argument("--remote", "-r", help="Remote host (e.g. cachyos-x8664)")
+    parser.add_argument("--remote-port", type=int, default=8080)
     parser.add_argument("--no-tui", action="store_true", help="Run server only (no TUI)")
     args = parser.parse_args()
     
-    BASE_DIR = os.path.abspath(args.directory)
     PORT = args.port
     
-    if not os.path.isdir(BASE_DIR):
-        print(f"❌ Carpeta no encontrada: {BASE_DIR}")
-        sys.exit(1)
+    if args.remote:
+        REMOTE_HOST = args.remote
+        REMOTE_PORT = args.remote_port
+        REMOTE_MODE = True
+        BASE_DIR = args.directory if args.directory != os.path.expanduser("~/storage") else "/"
+    else:
+        BASE_DIR = os.path.abspath(args.directory)
+        if not os.path.isdir(BASE_DIR):
+            print(f"Carpeta no encontrada: {BASE_DIR}")
+            sys.exit(1)
     
     if args.no_tui:
         # Server-only mode

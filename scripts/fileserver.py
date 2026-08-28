@@ -321,6 +321,11 @@ class FileHandler(http.server.BaseHTTPRequestHandler):
             self.send_zip(full_path, rel_path or "files")
             return
         
+        # JSON API for TUI remote mode
+        if os.path.isdir(full_path) and 'json' in query:
+            self.send_json_listing(full_path, rel_path)
+            return
+        
         # Directory listing
         if os.path.isdir(full_path):
             self.send_html(full_path, rel_path)
@@ -384,6 +389,36 @@ class FileHandler(http.server.BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
         self.wfile.write(json.dumps({"uploaded": uploaded}).encode())
+    
+    def send_json_listing(self, dir_path, rel_path):
+        """API JSON para TUI remoto"""
+        items = []
+        try:
+            for entry in sorted(os.listdir(dir_path)):
+                full = os.path.join(dir_path, entry)
+                is_dir = os.path.isdir(full)
+                try:
+                    stat = os.stat(full)
+                    size = stat.st_size if not is_dir else 0
+                    mtime = stat.st_mtime
+                except:
+                    size = 0
+                    mtime = 0
+                entry_rel = os.path.join(rel_path, entry) if rel_path else entry
+                items.append({
+                    'name': entry,
+                    'is_dir': is_dir,
+                    'size': size,
+                    'mtime': mtime,
+                    'path': entry_rel,
+                })
+        except PermissionError:
+            self.send_error(403)
+            return
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({'path': rel_path or '/', 'items': items}).encode())
     
     def send_html(self, dir_path, rel_path):
         """Genera listing HTML"""

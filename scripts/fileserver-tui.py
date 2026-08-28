@@ -183,6 +183,7 @@ def download_file(name):
             return False, str(e)
 
 def draw_ui(stdscr, height, width):
+    global SELECTED, SCROLL, STATUS_MSG, STATUS_COLOR
     stdscr.erase()
     left_w = width // 2
     right_w = width - left_w

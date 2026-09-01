@@ -27,7 +27,7 @@ set -q COLORTERM; or set -gx COLORTERM truecolor
 function __load_termux_material_colors
     set -l f "$HOME/.termux/material-colors.sh"
     test -r "$f"; and source "$f"; and return
-    set -f "$HOME/.termux/material-colors.properties"
+    set -l f "$HOME/.termux/material-colors.properties"
     test -r "$f"; or return
 
     while read -l line
